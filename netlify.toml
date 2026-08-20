@@ -1,0 +1,17 @@
+# Configuração para o site institucional PÚBLICO (pasta site/).
+# A área interna (pasta app/) deve ser um site Netlify SEPARADO — mesmo
+# sendo tudo estático, manter os dois em domínios/deploys distintos evita
+# que o robô de busca indexe a tela de login do sistema financeiro junto
+# com as páginas de eventos, e facilita restringir o subdomínio interno
+# depois (ex: com Netlify Identity ou proteção por senha do próprio plano).
+#
+# Ver README_DEPLOY.md para o passo a passo completo dos dois sites.
+
+[build]
+  publish = "site"
+  command = ""
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 404

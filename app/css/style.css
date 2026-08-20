@@ -1,0 +1,158 @@
+/* =====================================================================
+   SGDE — Direção visual "Vitral Vespertino"
+   Base azul-marinho quase-preto + dourado envelhecido + vinho para alertas.
+   Conteúdo/dados em fundo claro para legibilidade máxima.
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap');
+
+:root{
+  --navy-950:#0F1B2D;
+  --navy-800:#1C2C42;
+  --navy-700:#28405C;
+  --gold-500:#B8935A;
+  --gold-300:#D8BC8A;
+  --wine-700:#7A2E3A;
+  --wine-900:#4A1A22;
+  --green-700:#2F5C46;
+  --parchment-50:#F7F4EE;
+  --parchment-100:#EFE9DD;
+  --ink-900:#1B2027;
+  --ink-500:#5B6472;
+  --border:#DAD2C0;
+  --radius:10px;
+  --shadow:0 4px 18px rgba(15,27,45,.10);
+  font-size:16px;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--parchment-50);
+  color:var(--ink-900);
+}
+h1,h2,h3,.liturgica{
+  font-family:'EB Garamond',serif;
+  font-weight:600;
+  letter-spacing:.01em;
+}
+
+/* ---- Shell da aplicação ---- */
+.shell{display:flex;min-height:100vh}
+.sidebar{
+  width:240px;flex-shrink:0;
+  background:linear-gradient(180deg,var(--navy-950),var(--navy-800));
+  color:var(--parchment-100);
+  padding:28px 18px;
+  display:flex;flex-direction:column;gap:6px;
+}
+.sidebar .brand{
+  font-family:'EB Garamond',serif;font-size:1.35rem;font-weight:600;
+  color:var(--gold-300);margin-bottom:28px;padding-bottom:16px;
+  border-bottom:1px solid rgba(216,188,138,.25);
+}
+.sidebar a{
+  color:var(--parchment-100);text-decoration:none;
+  padding:10px 12px;border-radius:8px;font-size:.92rem;
+  display:flex;align-items:center;gap:10px;opacity:.85;
+}
+.sidebar a:hover,.sidebar a.active{
+  background:rgba(184,147,90,.16);opacity:1;color:var(--gold-300);
+}
+.sidebar .papel-badge{
+  margin-top:auto;padding-top:16px;border-top:1px solid rgba(216,188,138,.2);
+  font-size:.78rem;color:var(--gold-300);opacity:.85;
+}
+
+.main{flex:1;padding:32px 40px;max-width:1180px}
+.topbar{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:28px}
+.topbar h1{font-size:1.6rem;margin:0;color:var(--navy-950)}
+.topbar .sub{color:var(--ink-500);font-size:.9rem;margin-top:2px}
+
+/* ---- Cards / painéis ---- */
+.card{
+  background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+  padding:22px 24px;margin-bottom:20px;box-shadow:var(--shadow);
+}
+.card h2{font-size:1.15rem;margin:0 0 16px;color:var(--navy-800)}
+.grid{display:grid;gap:18px}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){.grid-3,.grid-4{grid-template-columns:1fr 1fr}}
+
+.stat{
+  background:var(--navy-950);color:var(--parchment-100);
+  border-radius:var(--radius);padding:18px 20px;
+}
+.stat .label{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--gold-300);opacity:.9}
+.stat .value{font-family:'EB Garamond',serif;font-size:1.9rem;font-weight:600;margin-top:4px}
+
+/* ---- Formulários ---- */
+label{display:block;font-size:.82rem;color:var(--ink-500);margin-bottom:4px;margin-top:12px}
+input,select,textarea{
+  width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:7px;
+  font-family:'Inter',sans-serif;font-size:.92rem;background:#fff;color:var(--ink-900);
+}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--gold-500);outline-offset:1px;border-color:var(--gold-500)}
+
+button, .btn{
+  font-family:'Inter',sans-serif;font-weight:600;font-size:.88rem;
+  padding:10px 18px;border-radius:7px;border:none;cursor:pointer;
+  background:var(--navy-800);color:#fff;
+}
+button:hover,.btn:hover{background:var(--navy-700)}
+button.gold,.btn.gold{background:var(--gold-500);color:var(--navy-950)}
+button.gold:hover{background:var(--gold-300)}
+button.wine{background:var(--wine-700);color:#fff}
+button.wine:hover{background:var(--wine-900)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.ghost{background:transparent;border:1px solid var(--border);color:var(--navy-800)}
+
+/* ---- Tabelas ---- */
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{
+  text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--ink-500);padding:8px 10px;border-bottom:2px solid var(--border);
+}
+td{padding:9px 10px;border-bottom:1px solid var(--parchment-100)}
+tr:hover td{background:var(--parchment-50)}
+
+/* ---- Badges de status ---- */
+.badge{display:inline-block;padding:3px 10px;border-radius:100px;font-size:.72rem;font-weight:600}
+.badge.aberto,.badge.pendente_aprovacao{background:#EFE4C8;color:#7A5A16}
+.badge.conferido,.badge.aprovado{background:#DCEAE1;color:var(--green-700)}
+.badge.depositado,.badge.liquidado{background:#DDE6EF;color:var(--navy-700)}
+.badge.divergente,.badge.reprovado{background:#F3DADD;color:var(--wine-700)}
+
+/* ---- Divisor litúrgico discreto ---- */
+.divisor{
+  height:1px;margin:24px 0;
+  background:linear-gradient(90deg,transparent,var(--gold-500) 15%,var(--gold-500) 85%,transparent);
+  opacity:.35;
+}
+
+.alert{padding:12px 16px;border-radius:8px;font-size:.88rem;margin-bottom:16px}
+.alert.error{background:#F3DADD;color:var(--wine-900);border:1px solid var(--wine-700)}
+.alert.success{background:#DCEAE1;color:var(--green-700);border:1px solid var(--green-700)}
+
+/* ---- Tela de login: única tela com linguagem sacra explícita ---- */
+.login-screen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at top,#182A44 0%,var(--navy-950) 70%);
+}
+.login-box{
+  background:rgba(28,44,66,.55);backdrop-filter:blur(6px);
+  border:1px solid rgba(216,188,138,.25);border-radius:14px;
+  padding:44px 40px;width:360px;text-align:center;
+}
+.login-box .emblem{
+  width:52px;height:52px;margin:0 auto 18px;border:1.5px solid var(--gold-300);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:var(--gold-300);font-family:'EB Garamond',serif;font-size:1.5rem;
+}
+.login-box h1{color:var(--gold-300);font-size:1.5rem;margin:0 0 6px}
+.login-box .sub{color:var(--parchment-100);opacity:.65;font-size:.85rem;margin-bottom:26px}
+.login-box label{color:var(--parchment-100);opacity:.8;text-align:left}
+.login-box input{background:rgba(255,255,255,.06);border-color:rgba(216,188,138,.3);color:#fff}
+.login-box button{width:100%;margin-top:22px}

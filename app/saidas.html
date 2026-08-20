@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Saídas</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar"><div><h1>Saídas</h1><div class="sub">Solicitação → alçada de aprovação → NF/RPA → liquidação</div></div></div>
+      <div class="alert-area"></div>
+
+      <div class="card">
+        <h2>Nova solicitação de pagamento</h2>
+        <form id="form-solicitacao">
+          <div class="grid grid-4">
+            <div><label>Fornecedor</label><select name="fornecedor_id" id="sel-fornecedor" required></select></div>
+            <div><label>Centro de custo</label><select name="centro_custo_id" id="sel-centro" required></select></div>
+            <div><label>Valor</label><input type="number" step="0.01" min="0.01" name="valor" required></div>
+            <div><label>Vencimento</label><input type="date" name="data_vencimento" required></div>
+          </div>
+          <label>Descrição</label>
+          <textarea name="descricao" rows="2" required></textarea>
+          <button type="submit" class="gold" style="margin-top:16px">Solicitar</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Solicitações</h2>
+        <table id="tbl-solicitacoes">
+          <thead><tr><th>Fornecedor</th><th>Centro custo</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/supabase.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let sessao;
+
+    async function carregarSelects() {
+      const { data: fornecedores } = await supabase.from('fornecedores').select('id_fornecedor, razao_social').eq('ativo', true).order('razao_social');
+      document.getElementById('sel-fornecedor').innerHTML = (fornecedores || [])
+        .map(f => `<option value="${f.id_fornecedor}">${f.razao_social}</option>`).join('') || '<option value="">Cadastre um fornecedor</option>';
+
+      const { data: centros } = await supabase.from('centros_custo').select('id_centro, nome').eq('ativo', true).order('nome');
+      document.getElementById('sel-centro').innerHTML = (centros || [])
+        .map(c => `<option value="${c.id_centro}">${c.nome}</option>`).join('') || '<option value="">Cadastre um centro de custo</option>';
+    }
+
+    async function carregarSolicitacoes() {
+      const { data: rows } = await supabase.from('solicitacoes_pagamento')
+        .select('id_solicitacao, valor, data_vencimento, status, solicitante_id, documento_fiscal_id, fornecedores(razao_social), centros_custo(nome)')
+        .order('criado_em', { ascending: false }).limit(30);
+
+      const linhas = (rows || []).map(r => {
+        let acoes = '';
+        if (r.status === 'pendente_aprovacao' && r.solicitante_id !== sessao.usuario_id &&
+            ['Tesoureiro', 'Diretoria', 'Administrador'].includes(sessao.papel)) {
+          acoes += `<button class="btn ghost" onclick="decidir('${r.id_solicitacao}', 'aprovado')">Aprovar</button>
+                     <button class="btn ghost" onclick="decidir('${r.id_solicitacao}', 'reprovado')">Reprovar</button>`;
+        }
+        if (r.status === 'aprovado' && !r.documento_fiscal_id) {
+          acoes += `<button class="btn ghost" onclick="abrirUploadNF('${r.id_solicitacao}')">Anexar NF/RPA</button>`;
+        }
+        if (r.status === 'aprovado' && r.documento_fiscal_id) {
+          acoes += `<button class="gold" onclick="liquidar('${r.id_solicitacao}')">Liquidar</button>`;
+        }
+        return `<tr>
+          <td>${r.fornecedores?.razao_social || '—'}</td>
+          <td>${r.centros_custo?.nome || '—'}</td>
+          <td>${formatarMoeda(r.valor)}</td>
+          <td>${new Date(r.data_vencimento).toLocaleDateString('pt-BR')}</td>
+          <td><span class="badge ${r.status}">${r.status.replace(/_/g, ' ')}</span></td>
+          <td>${acoes}</td>
+        </tr>`;
+      });
+      document.querySelector('#tbl-solicitacoes tbody').innerHTML = linhas.join('') || '<tr><td colspan="6">Nenhuma solicitação.</td></tr>';
+    }
+
+    window.decidir = async function (id, decisao) {
+      try {
+        await SGDE.comSessaoValida();
+        const { data: sol } = await supabase.from('solicitacoes_pagamento').select('valor').eq('id_solicitacao', id).single();
+        const { data: alcadas } = await supabase.from('alcadas_aprovacao').select('id_alcada, valor_limite').order('ordem');
+        const alcada = (alcadas || []).find(a => a.valor_limite === null || Number(sol.valor) <= Number(a.valor_limite)) || alcadas[alcadas.length - 1];
+        const { error } = await supabase.from('aprovacoes').insert({
+          solicitacao_id: id, aprovador_id: sessao.usuario_id, nivel_alcada: alcada.id_alcada, decisao,
+        });
+        if (error) throw error;
+        mostrarSucesso('Decisão registrada.'); carregarSolicitacoes();
+      } catch (err) { mostrarErro(err.message); }
+    };
+
+    window.abrirUploadNF = function (id) {
+      const url = prompt('URL do arquivo da NF/RPA já hospedado (ex: Supabase Storage):');
+      if (!url) return;
+      const tipo = prompt('Tipo do documento (NFe, NFSe, RPA, Recibo_Simples):', 'NFe');
+      if (!tipo) return;
+      anexarNF(id, url, tipo);
+    };
+
+    async function anexarNF(solicitacaoId, arquivoUrl, tipo) {
+      try {
+        await SGDE.comSessaoValida();
+        const { data: doc, error: e1 } = await supabase.from('documentos_fiscais').insert({
+          solicitacao_id: solicitacaoId, tipo, arquivo_url: arquivoUrl, validado_por_id: sessao.usuario_id,
+        }).select().single();
+        if (e1) throw e1;
+        const { error: e2 } = await supabase.from('solicitacoes_pagamento')
+          .update({ documento_fiscal_id: doc.id_documento }).eq('id_solicitacao', solicitacaoId);
+        if (e2) throw e2;
+        mostrarSucesso('Documento fiscal anexado.'); carregarSolicitacoes();
+      } catch (err) { mostrarErro(err.message); }
+    }
+
+    window.liquidar = async function (id) {
+      try {
+        await SGDE.comSessaoValida();
+        const { error } = await supabase.from('solicitacoes_pagamento').update({ status: 'liquidado' }).eq('id_solicitacao', id);
+        if (error) throw error;
+        mostrarSucesso('Solicitação liquidada.'); carregarSolicitacoes();
+      } catch (err) { mostrarErro(err.message); }
+    };
+
+    document.getElementById('form-solicitacao').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await SGDE.comSessaoValida();
+        const fd = new FormData(e.target);
+        const { error } = await supabase.from('solicitacoes_pagamento').insert({
+          fornecedor_id: fd.get('fornecedor_id'), centro_custo_id: fd.get('centro_custo_id'),
+          valor: fd.get('valor'), data_vencimento: fd.get('data_vencimento'),
+          descricao: fd.get('descricao'), solicitante_id: sessao.usuario_id,
+        });
+        if (error) throw error;
+        mostrarSucesso('Solicitação criada.'); e.target.reset(); carregarSolicitacoes();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    (async function init() {
+      protegerPagina();
+      montarSidebar('saidas.html');
+      sessao = SGDE.getSessao();
+      await SGDE.comSessaoValida();
+      await carregarSelects();
+      await carregarSolicitacoes();
+    })();
+  </script>
+</body>
+</html>

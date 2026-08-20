@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Conciliação Bancária</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar"><div><h1>Conciliação Bancária</h1><div class="sub">Importação de extrato OFX/CSV → conciliação automática por valor+data → fila manual</div></div></div>
+      <div class="alert-area"></div>
+
+      <div class="card">
+        <h2>Importar extrato</h2>
+        <form id="form-importar">
+          <div class="grid grid-3">
+            <div><label>Conta bancária</label><select name="conta_id" id="sel-conta" required></select></div>
+            <div><label>Formato</label>
+              <select name="formato" id="sel-formato">
+                <option value="OFX">OFX</option>
+                <option value="CSV">CSV (colunas: data, valor, descrição)</option>
+              </select>
+            </div>
+            <div><label>Arquivo</label><input type="file" name="arquivo" id="input-arquivo" accept=".ofx,.csv,.txt" required></div>
+          </div>
+          <button type="submit" class="gold" style="margin-top:16px">Importar e conciliar automaticamente</button>
+        </form>
+      </div>
+
+      <div class="grid grid-4">
+        <div class="stat"><div class="label">Movimentos importados</div><div class="value" id="st-total">—</div></div>
+        <div class="stat"><div class="label">Conciliados automaticamente</div><div class="value" id="st-conciliados">—</div></div>
+        <div class="stat"><div class="label">Pendentes (fila manual)</div><div class="value" id="st-pendentes">—</div></div>
+        <div class="stat"><div class="label">Ignorados</div><div class="value" id="st-ignorados">—</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Fila de conciliação manual</h2>
+        <table id="tbl-pendentes">
+          <thead><tr><th>Data</th><th>Valor</th><th>Descrição (banco)</th><th>Vincular a</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Movimentos recentes</h2>
+        <table id="tbl-movimentos">
+          <thead><tr><th>Data</th><th>Valor</th><th>Descrição</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/supabase.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/parsers.js"></script>
+  <script>
+    let sessao;
+
+    async function carregarContas() {
+      const { data } = await supabase.from('contas_bancarias').select('id_conta, banco, agencia, conta').eq('ativo', true);
+      document.getElementById('sel-conta').innerHTML = (data || [])
+        .map(c => `<option value="${c.id_conta}">${c.banco} · ag ${c.agencia} · cc ${c.conta}</option>`).join('')
+        || '<option value="">Cadastre uma conta bancária primeiro</option>';
+    }
+
+    async function carregarMovimentos() {
+      const { data } = await supabase.from('movimentos_bancarios')
+        .select('id_movimento, data, valor, descricao_banco, status_conciliacao, entrada_lote_id, saida_solicitacao_id')
+        .order('data', { ascending: false }).limit(50);
+
+      const total = (data || []).length;
+      const conciliados = (data || []).filter(m => m.status_conciliacao === 'conciliado').length;
+      const pendentes = (data || []).filter(m => m.status_conciliacao === 'pendente');
+      const ignorados = (data || []).filter(m => m.status_conciliacao === 'ignorado').length;
+
+      document.getElementById('st-total').textContent = total;
+      document.getElementById('st-conciliados').textContent = conciliados;
+      document.getElementById('st-pendentes').textContent = pendentes.length;
+      document.getElementById('st-ignorados').textContent = ignorados;
+
+      document.querySelector('#tbl-movimentos tbody').innerHTML = (data || []).map(m => `
+        <tr>
+          <td>${new Date(m.data).toLocaleDateString('pt-BR')}</td>
+          <td>${formatarMoeda(m.valor)}</td>
+          <td>${m.descricao_banco || '—'}</td>
+          <td><span class="badge ${m.status_conciliacao === 'conciliado' ? 'conferido' : m.status_conciliacao === 'ignorado' ? 'divergente' : 'aberto'}">${m.status_conciliacao}</span></td>
+        </tr>`).join('') || '<tr><td colspan="4">Nenhum movimento importado ainda.</td></tr>';
+
+      // fila manual: para cada pendente, oferece candidatos por proximidade de valor (± sem exigir data exata)
+      const linhasFila = await Promise.all(pendentes.map(async m => {
+        let candidatos = '';
+        if (m.valor > 0) {
+          const { data: lotes } = await supabase.from('lotes_arrecadacao')
+            .select('id_lote, data_culto, valor_apurado_total, tipo_culto')
+            .eq('status', 'conferido').gte('valor_apurado_total', m.valor - 5).lte('valor_apurado_total', m.valor + 5);
+          candidatos = (lotes || []).map(l =>
+            `<option value="lote:${l.id_lote}">Lote ${new Date(l.data_culto).toLocaleDateString('pt-BR')} · ${l.tipo_culto} · ${formatarMoeda(l.valor_apurado_total)}</option>`).join('');
+        } else {
+          const { data: sols } = await supabase.from('solicitacoes_pagamento')
+            .select('id_solicitacao, data_vencimento, valor, fornecedores(razao_social)')
+            .eq('status', 'liquidado').gte('valor', Math.abs(m.valor) - 5).lte('valor', Math.abs(m.valor) + 5);
+          candidatos = (sols || []).map(s =>
+            `<option value="saida:${s.id_solicitacao}">${s.fornecedores?.razao_social || '—'} · ${formatarMoeda(s.valor)} · ${new Date(s.data_vencimento).toLocaleDateString('pt-BR')}</option>`).join('');
+        }
+        return `<tr>
+          <td>${new Date(m.data).toLocaleDateString('pt-BR')}</td>
+          <td>${formatarMoeda(m.valor)}</td>
+          <td>${m.descricao_banco || '—'}</td>
+          <td><select id="cand-${m.id_movimento}"><option value="">— selecione —</option>${candidatos}</select></td>
+          <td>
+            <button class="btn ghost" onclick="vincularManual('${m.id_movimento}')">Vincular</button>
+            <button class="btn ghost" onclick="ignorarMovimento('${m.id_movimento}')">Ignorar</button>
+          </td>
+        </tr>`;
+      }));
+      document.querySelector('#tbl-pendentes tbody').innerHTML = linhasFila.join('') || '<tr><td colspan="5">Fila vazia — tudo conciliado.</td></tr>';
+    }
+
+    window.vincularManual = async function (movimentoId) {
+      const sel = document.getElementById(`cand-${movimentoId}`);
+      if (!sel.value) return mostrarErro('Selecione um candidato para vincular.');
+      const [tipo, id] = sel.value.split(':');
+      try {
+        await SGDE.comSessaoValida();
+        const patch = { status_conciliacao: 'conciliado', conciliado_em: new Date().toISOString(), conciliado_por_id: sessao.usuario_id };
+        if (tipo === 'lote') patch.entrada_lote_id = id; else patch.saida_solicitacao_id = id;
+        const { error } = await supabase.from('movimentos_bancarios').update(patch).eq('id_movimento', movimentoId);
+        if (error) throw error;
+        mostrarSucesso('Movimento conciliado manualmente.'); carregarMovimentos();
+      } catch (err) { mostrarErro(err.message); }
+    };
+
+    window.ignorarMovimento = async function (movimentoId) {
+      try {
+        await SGDE.comSessaoValida();
+        const { error } = await supabase.from('movimentos_bancarios')
+          .update({ status_conciliacao: 'ignorado' }).eq('id_movimento', movimentoId);
+        if (error) throw error;
+        mostrarSucesso('Movimento marcado como ignorado.'); carregarMovimentos();
+      } catch (err) { mostrarErro(err.message); }
+    };
+
+    document.getElementById('form-importar').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      btn.disabled = true;
+      try {
+        await SGDE.comSessaoValida();
+        const fd = new FormData(e.target);
+        const arquivo = document.getElementById('input-arquivo').files[0];
+        if (!arquivo) throw new Error('Selecione um arquivo.');
+        const texto = await arquivo.text();
+        const formato = fd.get('formato');
+        const movimentos = formato === 'OFX' ? parseOFX(texto) : parseCSV(texto);
+        if (movimentos.length === 0) throw new Error('Nenhum movimento reconhecido no arquivo — confira o formato.');
+
+        const { data: extrato, error: e1 } = await supabase.from('extratos_importados').insert({
+          conta_id: fd.get('conta_id'), arquivo_origem: arquivo.name, formato,
+          importado_por_id: sessao.usuario_id,
+        }).select().single();
+        if (e1) throw e1;
+
+        const linhas = await Promise.all(movimentos.map(async m => ({
+          extrato_id: extrato.id_extrato, data: m.data, valor: m.valor, descricao_banco: m.descricao,
+          hash_transacao: await hashSha256Hex(`${extrato.id_extrato}-${m.ref}`),
+        })));
+
+        const { error: e2 } = await supabase.from('movimentos_bancarios').insert(linhas);
+        if (e2) throw e2;
+
+        const { error: e3 } = await supabase.rpc('conciliar_extrato_automatico', { p_token: SGDE.getToken(), p_extrato_id: extrato.id_extrato });
+        if (e3) throw e3;
+
+        mostrarSucesso(`${movimentos.length} movimento(s) importado(s). Conciliação automática executada — confira a fila manual abaixo.`);
+        e.target.reset();
+        carregarMovimentos();
+      } catch (err) {
+        mostrarErro(err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    (async function init() {
+      protegerPagina();
+      montarSidebar('conciliacao.html');
+      sessao = SGDE.getSessao();
+      await SGDE.comSessaoValida();
+      await carregarContas();
+      await carregarMovimentos();
+    })();
+  </script>
+</body>
+</html>

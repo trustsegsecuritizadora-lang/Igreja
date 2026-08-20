@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eventos & Campanhas</title>
+<meta name="description" content="Próximos eventos e campanhas da igreja.">
+<link rel="stylesheet" href="../app/css/style.css">
+<style>
+  .hero{background:linear-gradient(180deg,var(--navy-950),var(--navy-800));color:var(--parchment-100);padding:60px 20px;text-align:center}
+  .hero h1{color:var(--gold-300);font-size:2.1rem;margin:0 0 8px}
+  .hero p{opacity:.75;max-width:520px;margin:0 auto}
+  .wrap{max-width:960px;margin:0 auto;padding:40px 20px}
+  .evento-card,.campanha-card{display:grid;grid-template-columns:220px 1fr;gap:22px;margin-bottom:22px}
+  .evento-card img,.campanha-card img{width:220px;height:140px;object-fit:cover;border-radius:var(--radius);background:var(--parchment-100)}
+  @media(max-width:640px){.evento-card,.campanha-card{grid-template-columns:1fr}.evento-card img,.campanha-card img{width:100%}}
+  .barra{height:8px;background:var(--parchment-100);border-radius:100px;overflow:hidden;margin:10px 0}
+  .barra > div{height:100%;background:var(--gold-500)}
+  footer{text-align:center;padding:30px;color:var(--ink-500);font-size:.8rem}
+  .form-inscricao{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .form-inscricao input{flex:1;min-width:160px}
+</style>
+</head>
+<body>
+  <div class="hero">
+    <h1>Eventos & Campanhas</h1>
+    <p>Acompanhe o que está acontecendo e participe.</p>
+  </div>
+
+  <div class="wrap">
+    <section>
+      <h2 class="liturgica">Próximos eventos</h2>
+      <div class="divisor"></div>
+      <div id="lista-eventos">Carregando…</div>
+    </section>
+
+    <section style="margin-top:40px">
+      <h2 class="liturgica">Campanhas em andamento</h2>
+      <div class="divisor"></div>
+      <div id="lista-campanhas">Carregando…</div>
+    </section>
+
+    <section id="secao-pix" class="card" style="margin-top:40px; display:none">
+      <h2 class="liturgica" style="margin:0 0 6px">Doação avulsa via PIX</h2>
+      <p class="sub" style="margin-bottom:12px">Quer contribuir fora de uma campanha específica? Use a chave abaixo.</p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <code id="chave-pix" style="background:var(--parchment-100);padding:8px 12px;border-radius:8px;font-size:.9rem"></code>
+        <button class="btn ghost" id="btn-copiar-pix">Copiar chave</button>
+      </div>
+    </section>
+  </div>
+
+  <footer>SGDE — Sistema de Gestão Digital Eclesiástico</footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/supabase.min.js"></script>
+  <script>
+    // Este site é 100% público: usa só a anon key (sem login), e a RLS no
+    // banco garante que só linhas com publicado=true chegam até aqui.
+    const SUPABASE_URL = 'https://fragxrqofweahrhgozhq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZyYWd4cnFvZndlYWhyaGdvemhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzcyNzUsImV4cCI6MjEwMjgxMzI3NX0.A1mEQtBloGuuJJt9QhL7002RHCgBKOV5dIPdCsTvVyo';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    function formatarMoeda(v) {
+      return (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    async function carregarEventos() {
+      const { data, error } = await supabase.from('eventos')
+        .select('id_evento, titulo, descricao, data_inicio, local, imagem_url, inscricao_aberta, vagas_limite')
+        .eq('publicado', true).gte('data_inicio', new Date().toISOString()).order('data_inicio');
+
+      const el = document.getElementById('lista-eventos');
+      if (error || !data || data.length === 0) {
+        el.innerHTML = '<p>Nenhum evento programado no momento.</p>';
+        return;
+      }
+      el.innerHTML = data.map(ev => `
+        <div class="card evento-card">
+          <img src="${ev.imagem_url || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22220%22 height=%22140%22%3E%3Crect width=%22220%22 height=%22140%22 fill=%22%23EFE9DD%22/%3E%3C/svg%3E'}" alt="">
+          <div>
+            <h3 style="margin:0 0 4px">${ev.titulo}</h3>
+            <div class="sub" style="margin-bottom:8px">
+              ${new Date(ev.data_inicio).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}
+              ${ev.local ? ' · ' + ev.local : ''}
+            </div>
+            <p style="font-size:.9rem">${ev.descricao || ''}</p>
+            ${ev.inscricao_aberta ? `
+              <form class="form-inscricao" data-evento="${ev.id_evento}">
+                <input type="text" name="nome" placeholder="Seu nome" required>
+                <input type="text" name="contato" placeholder="E-mail ou telefone" required>
+                <button type="submit" class="gold">Inscrever-se</button>
+              </form>
+              <div class="msg" style="font-size:.85rem;margin-top:6px"></div>
+            ` : ''}
+          </div>
+        </div>`).join('');
+
+      el.querySelectorAll('.form-inscricao').forEach(form => {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const fd = new FormData(form);
+          const msg = form.parentElement.querySelector('.msg');
+          const { error } = await supabase.from('inscricoes_evento').insert({
+            evento_id: form.dataset.evento, nome: fd.get('nome'), contato: fd.get('contato'),
+          });
+          msg.textContent = error ? (error.message.includes('duplicate') ? 'Você já está inscrito.' : 'Não foi possível inscrever: ' + error.message)
+                                   : 'Inscrição confirmada!';
+          msg.style.color = error ? '#7A2E3A' : '#2F5C46';
+          if (!error) form.reset();
+        });
+      });
+    }
+
+    async function carregarCampanhas() {
+      const { data: campanhas, error } = await supabase.from('campanhas')
+        .select('id_campanha, titulo, descricao, meta_valor, data_fim, imagem_url')
+        .eq('publicado', true).order('data_fim');
+
+      const el = document.getElementById('lista-campanhas');
+      if (error || !campanhas || campanhas.length === 0) {
+        el.innerHTML = '<p>Nenhuma campanha ativa no momento.</p>';
+        return;
+      }
+
+      const { data: progresso } = await supabase.rpc('campanha_progresso_publica');
+      const progressoPorId = Object.fromEntries((progresso || []).map(p => [p.id_campanha, p]));
+
+      el.innerHTML = campanhas.map(c => {
+        const p = progressoPorId[c.id_campanha];
+        const arrecadado = p ? Number(p.valor_arrecadado) : 0;
+        const pct = c.meta_valor ? Math.min(100, Math.round((arrecadado / c.meta_valor) * 100)) : null;
+        return `
+        <div class="card campanha-card">
+          <img src="${c.imagem_url || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22220%22 height=%22140%22%3E%3Crect width=%22220%22 height=%22140%22 fill=%22%23EFE9DD%22/%3E%3C/svg%3E'}" alt="">
+          <div>
+            <h3 style="margin:0 0 4px">${c.titulo}</h3>
+            ${c.data_fim ? `<div class="sub" style="margin-bottom:8px">Até ${new Date(c.data_fim).toLocaleDateString('pt-BR')}</div>` : ''}
+            <p style="font-size:.9rem">${c.descricao || ''}</p>
+            ${c.meta_valor ? `
+              <div class="barra"><div style="width:${pct}%"></div></div>
+              <div class="sub">${formatarMoeda(arrecadado)} de ${formatarMoeda(c.meta_valor)} (${pct}%)</div>
+            ` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function carregarPix() {
+      const { data } = await supabase.from('configuracoes_publicas').select('valor').eq('chave', 'pix_doacao_avulsa').maybeSingle();
+      if (data && data.valor) {
+        document.getElementById('chave-pix').textContent = data.valor;
+        document.getElementById('secao-pix').style.display = 'block';
+        document.getElementById('btn-copiar-pix').addEventListener('click', () => {
+          navigator.clipboard.writeText(data.valor);
+          document.getElementById('btn-copiar-pix').textContent = 'Copiado!';
+          setTimeout(() => { document.getElementById('btn-copiar-pix').textContent = 'Copiar chave'; }, 2000);
+        });
+      }
+    }
+
+    carregarEventos();
+    carregarCampanhas();
+    carregarPix();
+  </script>
+</body>
+</html>

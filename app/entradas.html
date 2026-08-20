@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Entradas</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar"><div><h1>Entradas</h1><div class="sub">Abertura de lote → dupla conferência → lançamento → recibo</div></div></div>
+      <div class="alert-area"></div>
+
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        <div class="card">
+          <h2>Abrir novo lote</h2>
+          <form id="form-lote">
+            <label>Data do culto</label>
+            <input type="date" name="data_culto" required>
+            <label>Tipo de culto</label>
+            <input type="text" name="tipo_culto" placeholder="Domingo Manhã, Célula..." required>
+            <label>Valor apurado (contagem física)</label>
+            <input type="number" step="0.01" min="0" name="valor_apurado_total" required>
+            <button type="submit" class="gold">Abrir lote</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Registrar minha contagem</h2>
+          <form id="form-contagem">
+            <label>Lote</label>
+            <select name="lote_id" id="sel-lote-contagem" required></select>
+            <label>Valor que eu contei</label>
+            <input type="number" step="0.01" min="0" name="valor_contado" required>
+            <label>Justificativa (só se houver divergência)</label>
+            <textarea name="justificativa_divergencia" rows="2"></textarea>
+            <button type="submit">Registrar contagem</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Lançar dízimo/oferta</h2>
+        <form id="form-lancamento">
+          <div class="grid grid-4">
+            <div>
+              <label>Lote (opcional p/ PIX direto)</label>
+              <select name="lote_id" id="sel-lote-lancamento"><option value="">— nenhum —</option></select>
+            </div>
+            <div>
+              <label>Tipo</label>
+              <select name="tipo_entrada" required>
+                <option value="Dizimo">Dízimo</option>
+                <option value="Oferta_Geral">Oferta Geral</option>
+                <option value="Oferta_Missionaria">Oferta Missionária</option>
+                <option value="Oferta_Especial">Oferta Especial</option>
+                <option value="Doacao_Patrimonial">Doação Patrimonial</option>
+                <option value="Voto">Voto</option>
+              </select>
+            </div>
+            <div>
+              <label>Forma de recebimento</label>
+              <select name="forma_recebimento" required>
+                <option value="Especie">Espécie</option>
+                <option value="PIX">PIX</option>
+                <option value="Cartao">Cartão</option>
+                <option value="Transferencia">Transferência</option>
+              </select>
+            </div>
+            <div>
+              <label>Valor</label>
+              <input type="number" step="0.01" min="0.01" name="valor" required>
+            </div>
+          </div>
+          <label>Membro (obrigatório para dízimo — identificação p/ recibo)</label>
+          <select name="membro_id" id="sel-membro"><option value="">— oferta sem identificação —</option></select>
+          <button type="submit" class="gold" style="margin-top:16px">Lançar</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Lotes recentes</h2>
+        <table id="tbl-lotes">
+          <thead><tr><th>Data</th><th>Tipo</th><th>Valor apurado</th><th>Conferências</th><th>Status</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/supabase.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let sessao;
+
+    async function carregarSelects() {
+      const { data: lotes } = await supabase.from('lotes_arrecadacao')
+        .select('id_lote, data_culto, tipo_culto, status').in('status', ['aberto', 'aguardando_conferencia', 'divergente'])
+        .order('data_culto', { ascending: false });
+      const opts = (lotes || []).map(l =>
+        `<option value="${l.id_lote}">${new Date(l.data_culto).toLocaleDateString('pt-BR')} · ${l.tipo_culto}</option>`).join('');
+      document.getElementById('sel-lote-contagem').innerHTML = opts || '<option value="">Nenhum lote aberto</option>';
+      document.getElementById('sel-lote-lancamento').innerHTML = '<option value="">— nenhum —</option>' + opts;
+
+      const { data: membros } = await supabase.from('membros').select('id_membro, nome').eq('status', 'ativo').order('nome');
+      document.getElementById('sel-membro').innerHTML = '<option value="">— oferta sem identificação —</option>' +
+        (membros || []).map(m => `<option value="${m.id_membro}">${m.nome}</option>`).join('');
+    }
+
+    async function carregarLotes() {
+      const { data: lotes } = await supabase.from('lotes_arrecadacao')
+        .select('id_lote, data_culto, tipo_culto, valor_apurado_total, status')
+        .order('data_culto', { ascending: false }).limit(20);
+
+      const rows = await Promise.all((lotes || []).map(async l => {
+        const { count } = await supabase.from('contagem_lote').select('id_contagem', { count: 'exact', head: true })
+          .eq('lote_id', l.id_lote).eq('de_acordo', true);
+        const podeFechar = (count || 0) >= 2 && (l.status === 'aberto' || l.status === 'aguardando_conferencia');
+        return `<tr>
+          <td>${new Date(l.data_culto).toLocaleDateString('pt-BR')}</td>
+          <td>${l.tipo_culto}</td>
+          <td>${formatarMoeda(l.valor_apurado_total)}</td>
+          <td>${count || 0}/2+</td>
+          <td><span class="badge ${l.status}">${l.status.replace(/_/g, ' ')}</span></td>
+          <td>${podeFechar ? `<button class="btn ghost" onclick="fecharLote('${l.id_lote}')">Fechar lote</button>` : ''}</td>
+        </tr>`;
+      }));
+      document.querySelector('#tbl-lotes tbody').innerHTML = rows.join('') || '<tr><td colspan="6">Nenhum lote.</td></tr>';
+    }
+
+    window.fecharLote = async function (loteId) {
+      try {
+        await SGDE.comSessaoValida();
+        await SGDE.chamarRpc('fechar_lote', { p_token: SGDE.getToken(), p_lote_id: loteId });
+        mostrarSucesso('Lote fechado com sucesso.');
+        carregarLotes();
+      } catch (err) { mostrarErro(err.message); }
+    };
+
+    document.getElementById('form-lote').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await SGDE.comSessaoValida();
+        const fd = new FormData(e.target);
+        const { error } = await supabase.from('lotes_arrecadacao').insert({
+          data_culto: fd.get('data_culto'), tipo_culto: fd.get('tipo_culto'),
+          valor_apurado_total: fd.get('valor_apurado_total'), usuario_abertura_id: sessao.usuario_id,
+        });
+        if (error) throw error;
+        mostrarSucesso('Lote aberto.'); e.target.reset(); carregarSelects(); carregarLotes();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    document.getElementById('form-contagem').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await SGDE.comSessaoValida();
+        const fd = new FormData(e.target);
+        const { error } = await supabase.from('contagem_lote').insert({
+          lote_id: fd.get('lote_id'), usuario_conferente_id: sessao.usuario_id,
+          valor_contado: fd.get('valor_contado'), de_acordo: true,
+          justificativa_divergencia: fd.get('justificativa_divergencia') || null,
+        });
+        if (error) throw error;
+        mostrarSucesso('Contagem registrada.'); e.target.reset(); carregarLotes();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    document.getElementById('form-lancamento').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await SGDE.comSessaoValida();
+        const fd = new FormData(e.target);
+        const { data, error } = await supabase.from('lancamentos_entrada').insert({
+          lote_id: fd.get('lote_id') || null, membro_id: fd.get('membro_id') || null,
+          tipo_entrada: fd.get('tipo_entrada'), valor: fd.get('valor'),
+          forma_recebimento: fd.get('forma_recebimento'), criado_por_id: sessao.usuario_id,
+        }).select().single();
+        if (error) throw error;
+
+        if (fd.get('membro_id')) {
+          await SGDE.chamarRpc('emitir_recibo', { p_token: SGDE.getToken(), p_entrada_id: data.id_entrada });
+        }
+        mostrarSucesso('Lançamento registrado' + (fd.get('membro_id') ? ' e recibo emitido.' : '.'));
+        e.target.reset();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    (async function init() {
+      protegerPagina();
+      montarSidebar('entradas.html');
+      sessao = SGDE.getSessao();
+      await SGDE.comSessaoValida();
+      await carregarSelects();
+      await carregarLotes();
+    })();
+  </script>
+</body>
+</html>

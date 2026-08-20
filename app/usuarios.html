@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Usuários</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar"><div><h1>Usuários</h1><div class="sub">Só o Administrador cadastra e gerencia acessos.</div></div></div>
+      <div class="alert-area"></div>
+
+      <div class="card">
+        <h2>Novo usuário</h2>
+        <form id="form-usuario">
+          <div class="grid grid-4">
+            <div><label>Nome</label><input type="text" name="nome" required></div>
+            <div><label>Login</label><input type="text" name="login" required></div>
+            <div><label>Senha temporária</label><input type="text" name="senha" required></div>
+            <div><label>Papel</label>
+              <select name="papel" required>
+                <option value="Administrador">Administrador</option>
+                <option value="Tesoureiro">Tesoureiro</option>
+                <option value="Diretoria">Diretoria</option>
+                <option value="Secretaria">Secretaria</option>
+                <option value="Pastor">Pastor</option>
+                <option value="Auditor_Externo">Auditor Externo</option>
+                <option value="Contador">Contador</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="gold" style="margin-top:16px">Criar usuário</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Usuários cadastrados</h2>
+        <table id="tbl-usuarios">
+          <thead><tr><th>Nome</th><th>Login</th><th>Papel</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/supabase.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    async function carregarUsuarios() {
+      const { data, error } = await supabase.from('usuarios').select('id_usuario, nome, login, papel, status').order('nome');
+      if (error) { mostrarErro(error.message); return; }
+      document.querySelector('#tbl-usuarios tbody').innerHTML = (data || []).map(u => `
+        <tr>
+          <td>${u.nome}</td>
+          <td>${u.login}</td>
+          <td>${u.papel}</td>
+          <td><span class="badge ${u.status === 'ativo' ? 'conferido' : 'divergente'}">${u.status}</span></td>
+        </tr>`).join('') || '<tr><td colspan="4">Nenhum usuário.</td></tr>';
+    }
+
+    document.getElementById('form-usuario').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        SGDE.exigirPapel('Administrador');
+        await SGDE.comSessaoValida();
+        const fd = new FormData(e.target);
+        await SGDE.chamarRpc('criar_usuario', {
+          p_token: SGDE.getToken(), p_login: fd.get('login'), p_senha: fd.get('senha'),
+          p_nome: fd.get('nome'), p_papel: fd.get('papel'),
+        });
+        mostrarSucesso('Usuário criado. Peça para trocar a senha no primeiro acesso.');
+        e.target.reset();
+        carregarUsuarios();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    (async function init() {
+      protegerPagina();
+      montarSidebar('usuarios.html');
+      const sessao = SGDE.getSessao();
+      if (sessao && sessao.papel !== 'Administrador') {
+        document.querySelector('.main').innerHTML = '<div class="alert error">Só o Administrador acessa esta página.</div>';
+        return;
+      }
+      await SGDE.comSessaoValida();
+      await carregarUsuarios();
+    })();
+  </script>
+</body>
+</html>

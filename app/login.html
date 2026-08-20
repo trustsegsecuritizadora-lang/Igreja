@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Entrar</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-screen">
+  <div class="login-box">
+    <div class="emblem">✝</div>
+    <h1>SGDE</h1>
+    <div class="sub">Sistema de Gestão Digital Eclesiástico</div>
+
+    <form id="form-login">
+      <label for="login">Usuário</label>
+      <input id="login" name="login" type="text" autocomplete="username" required>
+
+      <label for="senha">Senha</label>
+      <input id="senha" name="senha" type="password" autocomplete="current-password" required>
+
+      <div class="alert-area"></div>
+      <button type="submit" class="gold">Entrar</button>
+    </form>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/supabase.min.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const login = document.getElementById('login').value.trim();
+      const senha = document.getElementById('senha').value;
+      const btn = e.target.querySelector('button');
+      btn.disabled = true;
+      try {
+        await SGDE.login(login, senha);
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        mostrarErro(err.message);
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

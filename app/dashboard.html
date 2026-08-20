@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Balancete & Fluxo de Caixa</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h1>Balancete Mensal & Fluxo de Caixa</h1>
+          <div class="sub" id="periodo-label"></div>
+        </div>
+      </div>
+
+      <div class="alert-area"></div>
+
+      <div class="grid grid-4">
+        <div class="stat"><div class="label">Entradas no mês</div><div class="value" id="st-entradas">—</div></div>
+        <div class="stat"><div class="label">Saídas liquidadas</div><div class="value" id="st-saidas">—</div></div>
+        <div class="stat"><div class="label">Saldo do mês</div><div class="value" id="st-saldo">—</div></div>
+        <div class="stat"><div class="label">Pendentes de aprovação</div><div class="value" id="st-pendentes">—</div></div>
+      </div>
+
+      <div class="divisor"></div>
+
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        <div class="card">
+          <h2>Entradas por tipo</h2>
+          <table id="tbl-entradas-tipo"><thead><tr><th>Tipo</th><th>Valor</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div class="card">
+          <h2>Saídas por centro de custo</h2>
+          <table id="tbl-saidas-centro"><thead><tr><th>Centro de custo</th><th>Valor</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Solicitações pendentes de aprovação</h2>
+        <table id="tbl-pendentes">
+          <thead><tr><th>Fornecedor</th><th>Centro de custo</th><th>Valor</th><th>Vencimento</th><th>Solicitante</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/supabase.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    (async function init() {
+      protegerPagina();
+      montarSidebar('dashboard.html');
+
+      const hoje = new Date();
+      const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
+      const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().slice(0, 10);
+      document.getElementById('periodo-label').textContent =
+        hoje.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+      try {
+        await SGDE.comSessaoValida();
+
+        const { data: entradas, error: e1 } = await supabase
+          .from('lancamentos_entrada').select('tipo_entrada, valor, criado_em')
+          .gte('criado_em', inicioMes).lte('criado_em', fimMes + 'T23:59:59');
+        if (e1) throw e1;
+
+        const { data: saidas, error: e2 } = await supabase
+          .from('solicitacoes_pagamento')
+          .select('valor, status, data_vencimento, solicitante_id, centro_custo_id, fornecedor_id, centros_custo(nome), fornecedores(razao_social), usuarios(nome)')
+          .gte('data_vencimento', inicioMes).lte('data_vencimento', fimMes);
+        if (e2) throw e2;
+
+        const totalEntradas = (entradas || []).reduce((s, r) => s + Number(r.valor), 0);
+        const saidasLiquidadas = (saidas || []).filter(r => r.status === 'liquidado');
+        const totalSaidas = saidasLiquidadas.reduce((s, r) => s + Number(r.valor), 0);
+        const pendentes = (saidas || []).filter(r => r.status === 'pendente_aprovacao');
+
+        document.getElementById('st-entradas').textContent = formatarMoeda(totalEntradas);
+        document.getElementById('st-saidas').textContent = formatarMoeda(totalSaidas);
+        document.getElementById('st-saldo').textContent = formatarMoeda(totalEntradas - totalSaidas);
+        document.getElementById('st-pendentes').textContent = pendentes.length;
+
+        const porTipo = {};
+        (entradas || []).forEach(r => { porTipo[r.tipo_entrada] = (porTipo[r.tipo_entrada] || 0) + Number(r.valor); });
+        document.querySelector('#tbl-entradas-tipo tbody').innerHTML = Object.entries(porTipo)
+          .map(([k, v]) => `<tr><td>${k.replace(/_/g, ' ')}</td><td>${formatarMoeda(v)}</td></tr>`).join('')
+          || '<tr><td colspan="2">Sem lançamentos no período.</td></tr>';
+
+        const porCentro = {};
+        saidasLiquidadas.forEach(r => {
+          const nome = r.centros_custo?.nome || '—';
+          porCentro[nome] = (porCentro[nome] || 0) + Number(r.valor);
+        });
+        document.querySelector('#tbl-saidas-centro tbody').innerHTML = Object.entries(porCentro)
+          .map(([k, v]) => `<tr><td>${k}</td><td>${formatarMoeda(v)}</td></tr>`).join('')
+          || '<tr><td colspan="2">Sem saídas liquidadas no período.</td></tr>';
+
+        document.querySelector('#tbl-pendentes tbody').innerHTML = pendentes.map(r => `
+          <tr>
+            <td>${r.fornecedores?.razao_social || '—'}</td>
+            <td>${r.centros_custo?.nome || '—'}</td>
+            <td>${formatarMoeda(r.valor)}</td>
+            <td>${new Date(r.data_vencimento).toLocaleDateString('pt-BR')}</td>
+            <td>${r.usuarios?.nome || '—'}</td>
+          </tr>`).join('') || '<tr><td colspan="5">Nenhuma solicitação pendente.</td></tr>';
+
+      } catch (err) {
+        mostrarErro(err.message || 'Erro ao carregar o dashboard.');
+      }
+    })();
+  </script>
+</body>
+</html>
