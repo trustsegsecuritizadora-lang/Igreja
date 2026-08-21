@@ -61,6 +61,9 @@ img{max-width:100%;display:block}
   max-width:1200px;margin:0 auto;padding:22px 24px 0;
   display:flex;align-items:center;gap:28px;flex-wrap:wrap;
 }
+.nav-logo{display:flex;align-items:center;margin-right:4px;opacity:.95;transition:opacity .2s ease-out}
+.nav-logo:hover{opacity:1}
+.nav-logo img{width:30px;height:30px;display:block}
 .pubnav a{
   color:var(--parchment-100);opacity:.72;text-decoration:none;
   font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600;
@@ -107,12 +110,16 @@ img{max-width:100%;display:block}
 
 /* ---------- HERO ---------- */
 .hero{
+  position:relative;
   background:
     radial-gradient(ellipse 1000px 520px at 50% -10%, rgba(216,188,138,.16), transparent 60%),
     linear-gradient(175deg,var(--ink-1000),var(--navy-800) 65%,var(--navy-700));
   color:var(--parchment-100);padding:0 20px 120px;overflow:hidden;
 }
-.hero-inner{max-width:900px;margin:0 auto;padding-top:64px;text-align:center}
+.hero-inner{max-width:900px;margin:0 auto;padding-top:40px;text-align:center;position:relative;z-index:1}
+
+/* Logo institucional (asset oficial issd-logo-lockup) — substitui o antigo emblema SVG + sigla texto */
+.hero-logo{width:min(220px,52vw);margin:8px auto 22px;display:block;filter:drop-shadow(0 8px 22px rgba(0,0,0,.4))}
 .sigla{
   font-family:'EB Garamond',serif;font-weight:600;letter-spacing:.36em;
   text-transform:uppercase;font-size:.86rem;color:var(--gold-300);
@@ -121,6 +128,37 @@ img{max-width:100%;display:block}
 .hero h1{color:var(--parchment-50);font-size:clamp(2.1rem,5vw,3.4rem);margin:0 0 20px;line-height:1.14}
 .hero .sub{opacity:.8;max-width:600px;margin:0 auto;font-size:1.12rem;line-height:1.65}
 .hero .cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:36px}
+
+/* ---------- fotografias laterais do Hero (assets oficiais: hero-children-left / hero-elderly-right) ----------
+   O centro azul-marinho é o próprio fundo do .hero — as fotos "emergem" dele via mask-image em gradiente,
+   sem nenhuma borda perceptível entre fotografia e cor sólida. */
+.hero-photo{
+  position:absolute;top:0;bottom:0;z-index:0;
+  width:clamp(120px,24vw,340px);
+  -webkit-mask-image:linear-gradient(to right, black 30%, transparent 92%);
+  mask-image:linear-gradient(to right, black 30%, transparent 92%);
+}
+.hero-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.hero-photo::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(to right, rgba(10,18,32,.15), rgba(10,18,32,.55) 92%);
+}
+.hero-photo-left{left:0}
+.hero-photo-right{
+  right:0;
+  -webkit-mask-image:linear-gradient(to left, black 30%, transparent 92%);
+  mask-image:linear-gradient(to left, black 30%, transparent 92%);
+}
+.hero-photo-right::after{background:linear-gradient(to left, rgba(10,18,32,.15), rgba(10,18,32,.55) 92%)}
+
+@media(max-width:900px){
+  .hero-photo{width:clamp(70px,16vw,160px)}
+  .hero-photo::after{background:linear-gradient(to right, rgba(10,18,32,.4), rgba(10,18,32,.78) 88%)}
+  .hero-photo-right::after{background:linear-gradient(to left, rgba(10,18,32,.4), rgba(10,18,32,.78) 88%)}
+}
+@media(max-width:560px){
+  .hero-photo{display:none} /* mobile: foco total em logo, headline e CTAs — sem tentar encaixar a composição desktop */
+}
 
 /* ---------- PRÓXIMO CULTO (cartão flutuante que "encosta" no hero) ---------- */
 .culto-card{
@@ -179,6 +217,8 @@ img{max-width:100%;display:block}
 .progresso-linha .valor{font-family:'IBM Plex Mono',monospace;color:var(--navy-800);font-weight:600}
 .progresso-linha .pct{font-family:'IBM Plex Mono',monospace;color:var(--gold-500);font-weight:600}
 .campanha-card .rodape{display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--border)}
+.btn-contribuir-card{display:inline-block;margin-top:2px;cursor:pointer;color:var(--gold-500);font-weight:600;font-size:.86rem;text-decoration:underline;text-underline-offset:3px}
+.btn-contribuir-card:hover{opacity:.8}
 .campanha-card .saiba-mais{color:var(--gold-500);font-weight:600;font-size:.86rem}
 .contador-mini{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--wine-700);font-weight:600}
 
@@ -267,8 +307,11 @@ img{max-width:100%;display:block}
 }
 .qr-card .qr-kicker{
   font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-300);
-  margin:0 0 14px;font-weight:600;position:relative;
+  margin:0 0 6px;font-weight:600;position:relative;
 }
+.qr-card .destino-atual{font-size:.86rem;opacity:.85;margin:0 0 16px;position:relative}
+.qr-card .destino-atual strong{color:var(--gold-300)}
+#link-conhecer-campanha{color:var(--gold-300);position:relative}
 .qr-frame{
   background:var(--parchment-50);border-radius:12px;padding:14px;
   display:inline-flex;align-items:center;justify-content:center;position:relative;
@@ -295,6 +338,30 @@ img{max-width:100%;display:block}
 .transparencia{background:var(--parchment-100)}
 .transp-vazio{text-align:center;color:var(--ink-500);padding:40px 20px;border:1px dashed var(--border);border-radius:14px;background:#fff}
 
+/* ---------- PEDIDO DE ORAÇÃO ---------- */
+.oracao-secao{padding:88px 24px}
+.oracao-card{
+  background:#fff;border:1px solid var(--border);border-radius:16px;
+  padding:36px 36px 32px;box-shadow:var(--shadow);margin-top:44px;position:relative;overflow:hidden;
+}
+.oracao-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--wine-700),var(--gold-500))}
+.oracao-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.oracao-grid .span2{grid-column:1/-1}
+@media(max-width:600px){.oracao-grid{grid-template-columns:1fr}}
+.oracao-card label{display:block;font-size:.82rem;font-weight:600;color:var(--navy-800);margin-bottom:6px}
+.oracao-card .opcional{font-weight:400;color:var(--ink-500);text-transform:none;letter-spacing:0}
+.oracao-card input[type=text],.oracao-card input[type=tel],.oracao-card input[type=email],.oracao-card textarea{
+  width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;
+}
+.oracao-card input:disabled{background:var(--parchment-100);opacity:.6}
+.oracao-card textarea{resize:vertical}
+.oracao-checkbox{display:flex;align-items:center;gap:8px;font-size:.88rem;font-weight:400 !important;color:var(--ink-500);margin:18px 0 22px}
+.oracao-checkbox input{width:16px;height:16px}
+.oracao-aviso{font-size:.8rem;color:var(--ink-500);margin:14px 0 0}
+.oracao-mensagem{font-size:.88rem;margin:14px 0 0;font-weight:600;min-height:1.2em}
+.oracao-mensagem.sucesso{color:var(--forest-700)}
+.oracao-mensagem.erro{color:var(--wine-700)}
+
 /* ---------- VENHA NOS CONHECER ---------- */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px}
 @media(max-width:760px){.grid2{grid-template-columns:1fr}}
@@ -319,6 +386,7 @@ address{font-style:normal;line-height:1.65;color:var(--ink-900)}
 .rodape-grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:40px}
 @media(max-width:760px){.rodape-grid{grid-template-columns:1fr 1fr;gap:32px}}
 .rodape-marca .sigla{margin:0 0 12px}
+.rodape-logo{width:min(180px,60%);margin:0 0 16px}
 .rodape-marca p{opacity:.6;font-size:.86rem;line-height:1.6;max-width:280px}
 .rodape-col h4{font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-300);margin:0 0 16px;font-weight:600}
 .rodape-col a{display:block;color:var(--parchment-100);opacity:.7;text-decoration:none;font-size:.88rem;margin-bottom:11px}
