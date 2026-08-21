@@ -194,33 +194,73 @@ img{max-width:100%;display:block}
 @media(max-width:760px){.valores-lista{columns:1}}
 .valor-item{break-inside:avoid;margin-bottom:26px}
 .valor-item .nome{font-family:'EB Garamond',serif;font-weight:600;font-size:1.12rem;color:var(--navy-950);margin:0 0 4px}
+.destaque-aberta{
+  font-family:'EB Garamond',serif;font-weight:600;font-size:1.15rem;letter-spacing:.01em;
+  color:var(--navy-950);border-left:3px solid var(--gold-500);padding:6px 0 6px 18px;margin:22px 0;
+}
 .valor-item p{margin:0;color:var(--ink-500);font-size:.94rem;line-height:1.6}
 
-/* ---------- PROPÓSITO EM AÇÃO (campanhas) ---------- */
+/* ---------- PROPÓSITO EM AÇÃO (campanhas) — composição editorial ---------- */
 .proposito{background:var(--parchment-50)}
-.campanhas-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px}
-@media(max-width:900px){.campanhas-grid{grid-template-columns:1fr}}
-.campanha-card{
-  background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;
-  box-shadow:var(--shadow);display:flex;flex-direction:column;text-decoration:none;color:inherit;
-  transition:transform .22s ease-out,box-shadow .22s ease-out;
+.campanhas-lista{display:flex;flex-direction:column;gap:64px}
+.campanha-feature{
+  display:grid;grid-template-columns:1.05fr 1fr;align-items:stretch;
+  background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 18px 50px rgba(15,27,45,.10);
+  border:1px solid var(--border);
 }
-.campanha-card:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(15,27,45,.14)}
-.campanha-card .capa{aspect-ratio:16/8;background:linear-gradient(140deg,var(--navy-950),var(--navy-700));position:relative;display:flex;align-items:flex-end;padding:20px}
-.campanha-card .capa .tag{background:rgba(247,244,238,.94);color:var(--navy-900,#1B2027);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:999px}
-.campanha-card .miolo{padding:26px 26px 28px;display:flex;flex-direction:column;gap:14px;flex:1}
-.campanha-card h3{font-size:1.28rem;color:var(--navy-950)}
-.campanha-card .desc{color:var(--ink-500);font-size:.92rem;line-height:1.6;flex:1}
-.barra{height:8px;background:var(--parchment-100);border-radius:100px;overflow:hidden}
-.barra > div{height:100%;background:linear-gradient(90deg,var(--gold-500),var(--gold-300));border-radius:100px;transition:width .5s ease-out}
+.campanha-feature.reverse{grid-template-columns:1fr 1.05fr}
+.campanha-feature.reverse .cf-foto{order:2}
+.campanha-feature.reverse .cf-conteudo{order:1}
+.cf-foto{position:relative;min-height:420px;background-size:cover;background-position:center;background-color:var(--navy-900,#1B2027)}
+.cf-foto::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(10,18,32,.55),transparent 45%)}
+.cf-foto .cf-tag{
+  position:absolute;left:24px;bottom:22px;z-index:1;background:rgba(247,244,238,.95);color:var(--navy-950);
+  font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:6px 14px;border-radius:999px;
+}
+.cf-conteudo{padding:clamp(32px,4vw,56px);display:flex;flex-direction:column;gap:22px}
+.cf-conteudo h3{font-size:clamp(1.5rem,2.4vw,2rem);color:var(--navy-950);line-height:1.2}
+.cf-conteudo .cf-desc{color:var(--ink-500);font-size:1rem;line-height:1.7}
+.cf-numero-linha{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.cf-numero-linha .cf-arrecadado{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:clamp(2rem,3.4vw,2.7rem);color:var(--navy-950);line-height:1}
+.cf-numero-linha .cf-meta{color:var(--ink-500);font-size:.92rem}
+.barra{height:10px;background:var(--parchment-100);border-radius:100px;overflow:hidden}
+.barra > div{height:100%;background:linear-gradient(90deg,var(--gold-500),var(--gold-300));border-radius:100px;transition:width .6s ease-out}
+.cf-progresso-linha{display:flex;justify-content:space-between;align-items:baseline;font-size:.86rem}
+.cf-progresso-linha .pct{font-family:'IBM Plex Mono',monospace;color:var(--gold-500);font-weight:700}
+.cf-progresso-linha .restante{color:var(--ink-500)}
+.cf-datas{display:flex;gap:22px;flex-wrap:wrap;padding-top:4px;border-top:1px solid var(--border)}
+.cf-datas div{display:flex;flex-direction:column;gap:2px}
+.cf-datas .rotulo{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-500)}
+.cf-datas .val{font-family:'IBM Plex Mono',monospace;font-size:.9rem;color:var(--navy-800);font-weight:600}
+.cf-instituicao{font-family:'EB Garamond',serif;font-style:italic;color:var(--ink-500);font-size:.98rem}
+.cf-cta-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+@media(max-width:900px){
+  .campanha-feature,.campanha-feature.reverse{grid-template-columns:1fr}
+  .campanha-feature.reverse .cf-foto{order:0}
+  .campanha-feature.reverse .cf-conteudo{order:1}
+  .cf-foto{min-height:260px}
+}
+/* mantidos para compatibilidade com evento-card e outros usos de .barra/.progresso-linha */
 .progresso-linha{display:flex;justify-content:space-between;align-items:baseline;font-size:.86rem}
 .progresso-linha .valor{font-family:'IBM Plex Mono',monospace;color:var(--navy-800);font-weight:600}
 .progresso-linha .pct{font-family:'IBM Plex Mono',monospace;color:var(--gold-500);font-weight:600}
-.campanha-card .rodape{display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--border)}
-.btn-contribuir-card{display:inline-block;margin-top:2px;cursor:pointer;color:var(--gold-500);font-weight:600;font-size:.86rem;text-decoration:underline;text-underline-offset:3px}
-.btn-contribuir-card:hover{opacity:.8}
-.campanha-card .saiba-mais{color:var(--gold-500);font-weight:600;font-size:.86rem}
 .contador-mini{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--wine-700);font-weight:600}
+
+/* Listagem compacta de campanhas (eventos.html) — versão simples do card,
+   a composição editorial completa fica na Home. */
+.campanhas-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:900px){.campanhas-grid{grid-template-columns:1fr}}
+.campanha-card-simples{
+  background:#fff;border:1px solid var(--border);border-radius:14px;padding:22px 24px;
+  display:flex;flex-direction:column;gap:12px;text-decoration:none;color:inherit;
+  box-shadow:var(--shadow);transition:transform .2s ease-out,box-shadow .2s ease-out;
+}
+.campanha-card-simples:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(15,27,45,.14)}
+.campanha-card-simples .tag{align-self:flex-start;background:var(--gold-100);color:var(--wine-700);font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+.campanha-card-simples h3{font-size:1.15rem;color:var(--navy-950)}
+.campanha-card-simples .desc{color:var(--ink-500);font-size:.9rem;line-height:1.6}
+.campanha-card-simples .rodape{display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--border)}
+.campanha-card-simples .saiba-mais{color:var(--gold-500);font-weight:600;font-size:.86rem}
 
 /* ---------- PROJETOS ---------- */
 .projetos-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:24px}
@@ -233,6 +273,11 @@ img{max-width:100%;display:block}
 .projeto-card.futuro h3{color:var(--navy-800);font-size:1.1rem}
 .projeto-card.futuro p{color:var(--ink-500);font-size:.88rem}
 .projeto-card.futuro .badge{align-self:flex-start;background:var(--gold-100);color:var(--wine-700);font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+/* Frentes de Atuação — editorial, informativo, sem selo "em breve" e sem CTA falso */
+.projeto-card.frente{background:var(--parchment-100);border:1px solid var(--border);justify-content:flex-start}
+.projeto-card.frente .eyebrow-frente{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-500);font-weight:700;margin:0}
+.projeto-card.frente h3{color:var(--navy-950);font-size:1.2rem}
+.projeto-card.frente p{color:var(--ink-500);font-size:.9rem;line-height:1.6}
 .projeto-cta-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
 
 /* ---------- EVENTOS ---------- */
@@ -361,6 +406,14 @@ img{max-width:100%;display:block}
 .oracao-mensagem{font-size:.88rem;margin:14px 0 0;font-weight:600;min-height:1.2em}
 .oracao-mensagem.sucesso{color:var(--forest-700)}
 .oracao-mensagem.erro{color:var(--wine-700)}
+
+/* ---------- formulários genéricos (voluntário, instituição) ---------- */
+.campo-label{font-size:.82rem;font-weight:600;color:var(--navy-800);margin:0 0 -6px}
+.campo-label .opcional,.opcional{font-weight:400;color:var(--ink-500);text-transform:none;letter-spacing:0}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold-500)!important}
+.form-mensagem{font-size:.88rem;margin:14px 0 0;font-weight:600;min-height:1.2em}
+.form-mensagem.sucesso{color:var(--forest-700)}
+.form-mensagem.erro{color:var(--wine-700)}
 
 /* ---------- VENHA NOS CONHECER ---------- */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px}
