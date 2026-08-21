@@ -139,7 +139,7 @@
 
   (async function () {
     const { data: c } = await supabase.from('campanhas')
-      .select('id_campanha, meta_valor, modo, instituicao_beneficiada, total_arrecadado, entregues_cestas, entregues_brinquedos, criancas_familias_beneficiadas')
+      .select('id_campanha, meta_valor, modo, status, instituicao_beneficiada, total_arrecadado_confirmado, entregues_cestas, entregues_brinquedos, criancas_familias_beneficiadas')
       .eq('slug', 'um-dia-para-sorrir').maybeSingle();
     if (!c) return;
 
@@ -147,11 +147,11 @@
       document.getElementById('texto-instituicao').textContent = c.instituicao_beneficiada;
     }
 
-    if (c.modo === 'missao_cumprida') {
+    if (c.modo === 'missao_cumprida' || c.status === 'encerrada' || c.status === 'prestacao_contas') {
       // Prestação de contas: a interface de arrecadação é substituída pelos
       // resultados reais gravados no banco — nada é estimado no front.
       document.getElementById('aviso-missao-cumprida').classList.remove('oculto');
-      document.getElementById('valor-arrecadado').textContent = formatarMoeda(c.total_arrecadado || 0);
+      document.getElementById('valor-arrecadado').textContent = formatarMoeda(c.total_arrecadado_confirmado || 0);
       document.getElementById('valor-meta').textContent = formatarMoeda(c.meta_valor);
       document.getElementById('valor-pct').textContent = 'Meta cumprida';
       document.getElementById('barra-progresso').style.width = '100%';
@@ -167,8 +167,7 @@
       return;
     }
 
-    const progresso = await carregarProgressoCampanhas();
-    const arrecadado = progresso[c.id_campanha] || 0;
+    const arrecadado = Number(c.total_arrecadado_confirmado) || 0;
     const pct = c.meta_valor ? Math.min(100, Math.round((arrecadado / c.meta_valor) * 100)) : 0;
     document.getElementById('valor-arrecadado').textContent = formatarMoeda(arrecadado);
     document.getElementById('valor-meta').textContent = formatarMoeda(c.meta_valor);

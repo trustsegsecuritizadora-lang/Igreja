@@ -101,10 +101,9 @@
 
   (async function () {
     const { data: c } = await supabase.from('campanhas')
-      .select('id_campanha, meta_valor').eq('slug', 'nossa-casa-nosso-proposito').maybeSingle();
+      .select('id_campanha, meta_valor, total_arrecadado_confirmado').eq('slug', 'nossa-casa-nosso-proposito').maybeSingle();
     if (!c) return;
-    const progresso = await carregarProgressoCampanhas();
-    const arrecadado = progresso[c.id_campanha] || 0;
+    const arrecadado = Number(c.total_arrecadado_confirmado) || 0;
     const pct = c.meta_valor ? Math.min(100, Math.round((arrecadado / c.meta_valor) * 100)) : 0;
     document.getElementById('valor-arrecadado').textContent = formatarMoeda(arrecadado);
     document.getElementById('valor-meta').textContent = formatarMoeda(c.meta_valor);
