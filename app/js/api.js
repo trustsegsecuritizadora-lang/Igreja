@@ -8,8 +8,17 @@
 const SUPABASE_URL = 'https://fragxrqofweahrhgozhq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZyYWd4cnFvZndlYWhyaGdvemhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzcyNzUsImV4cCI6MjEwMjgxMzI3NX0.A1mEQtBloGuuJJt9QhL7002RHCgBKOV5dIPdCsTvVyo';
 
-window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+// Envia o token da sessão (sessionStorage) em TODA requisição ao Supabase via
+// header custom. As funções app_usuario_id()/app_papel() no banco leem esse
+// header para identificar quem está logado — cada requisição HTTP é
+// autocontida, então funciona tanto em chamadas de RPC quanto em
+// insert/update/select direto nas tabelas (RLS). Antes disso, a sessão só
+// era reconhecida dentro da MESMA chamada de rede que a validava, então
+// qualquer insert/update feito numa chamada separada (o padrão comum no app)
+// era barrado pela RLS por não saber quem era o usuário.
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  global: { headers: { 'x-sgde-token': sessionStorage.getItem('sgde_token') || '' } },
+});
 
 const SGDE = (() => {
   function getToken() { return sessionStorage.getItem('sgde_token'); }
