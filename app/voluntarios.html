@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Rede de Talentos — Voluntários</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .filtro-btn{border:1px solid var(--border,#DAD2C0);background:#fff;padding:7px 14px;border-radius:100px;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--ink-500,#5B6472)}
+  .filtro-btn.ativo{background:var(--navy-950,#0F1B2D);color:#fff;border-color:var(--navy-950,#0F1B2D)}
+  .busca{margin-bottom:16px}
+  .badge.novo{background:#F3DADD;color:#7A2E3A}
+  .badge.contatado{background:#EFE4C8;color:#7A5A16}
+  .badge.disponivel{background:#DDE6EF;color:#28405C}
+  .badge.participando{background:#DCEAE1;color:#2F5C46}
+  .badge.inativo{background:#EAEAEA;color:#666}
+  select.status-select{width:auto;padding:5px 8px;font-size:.8rem}
+  .obs-linha{display:flex;gap:6px;margin-top:6px}
+  .obs-linha input{flex:1}
+  .pedido-meta{font-size:.78rem;color:var(--ink-500,#5B6472);margin-top:4px}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar"><div><h1>Rede de Talentos — Voluntários</h1><div class="sub">Cadastros enviados pelo site público.</div></div></div>
+      <div class="alert-area"></div>
+
+      <div class="busca"><input type="text" id="campo-busca" placeholder="Buscar por nome, e-mail ou especialidade…" style="max-width:360px"></div>
+      <div class="filtros" id="filtros">
+        <button type="button" class="filtro-btn ativo" data-status="">Todos</button>
+        <button type="button" class="filtro-btn" data-status="novo">Novos</button>
+        <button type="button" class="filtro-btn" data-status="contatado">Contatados</button>
+        <button type="button" class="filtro-btn" data-status="disponivel">Disponíveis</button>
+        <button type="button" class="filtro-btn" data-status="participando">Participando</button>
+        <button type="button" class="filtro-btn" data-status="inativo">Inativos</button>
+      </div>
+
+      <div class="card">
+        <table id="tbl-voluntarios">
+          <thead><tr><th>Nome</th><th>Contato</th><th>Profissão / especialidade</th><th>Status</th><th>Observações</th></tr></thead>
+          <tbody><tr><td colspan="5">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let sessao;
+    let filtroAtual = '';
+    let buscaAtual = '';
+    const ROTULOS = { novo: 'Novo', contatado: 'Contatado', disponivel: 'Disponível', participando: 'Participando', inativo: 'Inativo' };
+
+    function escapeHtml(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    async function atualizarStatus(id, status) {
+      try {
+        await SGDE.comSessaoValida();
+        const { error } = await supabase.from('voluntarios').update({ status, atualizado_por_id: sessao.usuario_id, atualizado_em: new Date().toISOString() }).eq('id_voluntario', id);
+        if (error) throw error;
+        mostrarSucesso('Status atualizado.'); carregar();
+      } catch (err) { mostrarErro(err.message); }
+    }
+    window.atualizarStatusVoluntario = atualizarStatus;
+
+    window.salvarObservacao = async function (id, valor) {
+      try {
+        await SGDE.comSessaoValida();
+        const { error } = await supabase.from('voluntarios').update({ observacoes: valor, atualizado_por_id: sessao.usuario_id, atualizado_em: new Date().toISOString() }).eq('id_voluntario', id);
+        if (error) throw error;
+        mostrarSucesso('Observação salva.');
+      } catch (err) { mostrarErro(err.message); }
+    };
+
+    async function carregar() {
+      let query = supabase.from('voluntarios')
+        .select('id_voluntario, nome, profissao, empresa, especialidade, disponibilidade, telefone, email, como_contribuir, status, observacoes, criado_em')
+        .order('criado_em', { ascending: false }).limit(200);
+      if (filtroAtual) query = query.eq('status', filtroAtual);
+      const { data, error } = await query;
+      const tbody = document.querySelector('#tbl-voluntarios tbody');
+      if (error) { tbody.innerHTML = `<tr><td colspan="5">Erro: ${escapeHtml(error.message)}</td></tr>`; return; }
+      let linhas = data || [];
+      if (buscaAtual) {
+        const b = buscaAtual.toLowerCase();
+        linhas = linhas.filter(v => (v.nome || '').toLowerCase().includes(b) || (v.email || '').toLowerCase().includes(b) || (v.especialidade || '').toLowerCase().includes(b));
+      }
+      if (linhas.length === 0) { tbody.innerHTML = '<tr><td colspan="5">Nenhum cadastro encontrado.</td></tr>'; return; }
+      tbody.innerHTML = linhas.map(v => `
+        <tr>
+          <td>${escapeHtml(v.nome)}${v.empresa ? `<div class="pedido-meta">${escapeHtml(v.empresa)}</div>` : ''}</td>
+          <td class="pedido-meta">${escapeHtml([v.telefone, v.email].filter(Boolean).join(' · '))}</td>
+          <td class="pedido-meta">${escapeHtml([v.profissao, v.especialidade, v.disponibilidade].filter(Boolean).join(' · '))}</td>
+          <td>
+            <select class="status-select" onchange="atualizarStatusVoluntario('${v.id_voluntario}', this.value)">
+              ${Object.entries(ROTULOS).map(([k, r]) => `<option value="${k}" ${v.status === k ? 'selected' : ''}>${r}</option>`).join('')}
+            </select>
+          </td>
+          <td>
+            <div class="obs-linha">
+              <input type="text" value="${escapeHtml(v.observacoes || '')}" placeholder="Adicionar observação…" onblur="salvarObservacao('${v.id_voluntario}', this.value)">
+            </div>
+          </td>
+        </tr>`).join('');
+    }
+
+    document.querySelectorAll('.filtro-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
+        btn.classList.add('ativo'); filtroAtual = btn.dataset.status; carregar();
+      });
+    });
+    document.getElementById('campo-busca').addEventListener('input', (e) => { buscaAtual = e.target.value.trim(); carregar(); });
+
+    (async function init() {
+      protegerPagina();
+      montarSidebar('voluntarios.html');
+      sessao = SGDE.getSessao();
+      await SGDE.comSessaoValida();
+      await carregar();
+    })();
+  </script>
+</body>
+</html>

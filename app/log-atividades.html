@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Log de Atividades</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .filtro-btn{border:1px solid var(--border,#DAD2C0);background:#fff;padding:7px 14px;border-radius:100px;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--ink-500,#5B6472)}
+  .filtro-btn.ativo{background:var(--navy-950,#0F1B2D);color:#fff;border-color:var(--navy-950,#0F1B2D)}
+  .badge.INSERT{background:#DCEAE1;color:#2F5C46}
+  .badge.UPDATE{background:#EFE4C8;color:#7A5A16}
+  .badge.DELETE{background:#F3DADD;color:#7A2E3A}
+  .integridade{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .integridade .status{font-size:.86rem;font-weight:700}
+  .integridade .status.ok{color:#2F5C46}
+  .integridade .status.falha{color:#7A2E3A}
+  .pedido-meta{font-size:.78rem;color:var(--ink-500,#5B6472)}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar"><div><h1>Log de Atividades</h1><div class="sub">Trilha de auditoria hash-encadeada e append-only — cobre campanhas, arrecadação, voluntários, instituições e conteúdos.</div></div></div>
+      <div class="alert-area"></div>
+
+      <div class="integridade">
+        <button type="button" class="btn ghost" id="btn-verificar">Verificar integridade da cadeia</button>
+        <span class="status" id="status-integridade"></span>
+      </div>
+
+      <div class="filtros" id="filtros">
+        <button type="button" class="filtro-btn ativo" data-tabela="">Todas as tabelas</button>
+        <button type="button" class="filtro-btn" data-tabela="campanhas">Campanhas</button>
+        <button type="button" class="filtro-btn" data-tabela="campanha_lancamentos">Arrecadação</button>
+        <button type="button" class="filtro-btn" data-tabela="campanha_documentos">Documentos</button>
+        <button type="button" class="filtro-btn" data-tabela="voluntarios">Voluntários</button>
+        <button type="button" class="filtro-btn" data-tabela="instituicoes_indicadas">Instituições</button>
+        <button type="button" class="filtro-btn" data-tabela="conteudos_proposito">Conteúdos</button>
+        <button type="button" class="filtro-btn" data-tabela="pedidos_oracao">Pedidos de oração</button>
+      </div>
+
+      <div class="card">
+        <table id="tbl-log">
+          <thead><tr><th>Data/hora</th><th>Usuário</th><th>Ação</th><th>Tabela</th><th>Registro</th></tr></thead>
+          <tbody><tr><td colspan="5">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let sessao;
+    let filtroTabela = '';
+    const TABELAS_COBERTAS = ['campanhas', 'campanha_lancamentos', 'campanha_documentos', 'voluntarios', 'instituicoes_indicadas', 'conteudos_proposito', 'pedidos_oracao'];
+
+    function escapeHtml(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    document.getElementById('btn-verificar').addEventListener('click', async () => {
+      const el = document.getElementById('status-integridade');
+      el.textContent = 'Verificando…'; el.className = 'status';
+      try {
+        await SGDE.comSessaoValida();
+        const resultado = await SGDE.chamarRpc('verificar_integridade_auditoria');
+        const linhas = Array.isArray(resultado) ? resultado : [];
+        const comFalha = linhas.filter(l => l.integro === false || l.valido === false);
+        if (comFalha.length === 0) {
+          el.textContent = 'Cadeia íntegra — nenhuma alteração detectada.'; el.classList.add('ok');
+        } else {
+          el.textContent = `Atenção: ${comFalha.length} inconsistência(s) detectada(s) na cadeia.`; el.classList.add('falha');
+        }
+      } catch (err) {
+        el.textContent = 'Não foi possível verificar agora.'; el.classList.add('falha');
+        mostrarErro(err.message);
+      }
+    });
+
+    async function carregar() {
+      let query = supabase.from('log_auditoria')
+        .select('id_log, usuario_id, tabela_afetada, registro_id, acao, timestamp_evento')
+        .in('tabela_afetada', TABELAS_COBERTAS)
+        .order('timestamp_evento', { ascending: false }).limit(150);
+      if (filtroTabela) query = query.eq('tabela_afetada', filtroTabela);
+      const { data, error } = await query;
+      const tbody = document.querySelector('#tbl-log tbody');
+      if (error) { tbody.innerHTML = `<tr><td colspan="5">Erro: ${escapeHtml(error.message)}</td></tr>`; return; }
+      if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="5">Nenhum registro encontrado.</td></tr>'; return; }
+
+      const usuarioIds = [...new Set(data.map(l => l.usuario_id).filter(Boolean))];
+      let nomesPorId = {};
+      if (usuarioIds.length) {
+        const { data: usuarios } = await supabase.from('usuarios').select('id_usuario, nome').in('id_usuario', usuarioIds);
+        nomesPorId = Object.fromEntries((usuarios || []).map(u => [u.id_usuario, u.nome]));
+      }
+
+      tbody.innerHTML = data.map(l => `
+        <tr>
+          <td class="pedido-meta">${new Date(l.timestamp_evento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+          <td>${escapeHtml(nomesPorId[l.usuario_id] || 'Sistema')}</td>
+          <td><span class="badge ${l.acao}">${l.acao}</span></td>
+          <td class="pedido-meta">${escapeHtml(l.tabela_afetada)}</td>
+          <td class="pedido-meta">${escapeHtml((l.registro_id || '').toString().slice(0, 8))}…</td>
+        </tr>`).join('');
+    }
+
+    document.querySelectorAll('.filtro-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
+        btn.classList.add('ativo'); filtroTabela = btn.dataset.tabela; carregar();
+      });
+    });
+
+    (async function init() {
+      protegerPagina();
+      montarSidebar('log-atividades.html');
+      sessao = SGDE.getSessao();
+      await SGDE.comSessaoValida();
+      await carregar();
+    })();
+  </script>
+</body>
+</html>

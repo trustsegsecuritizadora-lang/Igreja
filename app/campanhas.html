@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Gestão de Campanhas</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .badge.rascunho{background:#EAEAEA;color:#666}
+  .badge.ativa{background:#DCEAE1;color:#2F5C46}
+  .badge.encerrada{background:#DDE6EF;color:#28405C}
+  .badge.prestacao_contas{background:#EFE4C8;color:#7A5A16}
+  .badge.arquivada{background:#EAEAEA;color:#666}
+  .acoes-linha{display:flex;gap:6px;flex-wrap:wrap}
+  .acoes-linha .btn{font-size:.76rem;padding:5px 10px}
+  .modal-fundo{position:fixed;inset:0;background:rgba(10,18,32,.5);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:36px 16px;overflow:auto}
+  .modal-fundo.aberto{display:flex}
+  .modal-caixa{background:#fff;border-radius:14px;padding:28px 30px;max-width:640px;width:100%;max-height:none}
+  .modal-caixa h3{margin:0 0 16px}
+  .modal-tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border,#DAD2C0)}
+  .modal-tab{padding:8px 14px;cursor:pointer;font-size:.86rem;font-weight:600;color:var(--ink-500,#5B6472);border-bottom:2px solid transparent}
+  .modal-tab.ativo{color:var(--navy-950,#0F1B2D);border-color:var(--gold-500,#B8935A)}
+  .modal-painel{display:none}
+  .modal-painel.ativo{display:block}
+  .lancamento-linha{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border,#DAD2C0);font-size:.86rem}
+  .lancamento-linha .val{font-weight:700}
+  .form-mini{display:flex;gap:8px;margin-top:12px;align-items:flex-end}
+  .form-mini input{flex:1}
+  .total-linha{font-size:1.1rem;font-weight:700;margin:10px 0;color:var(--navy-950,#0F1B2D)}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .pedido-meta{font-size:.78rem;color:var(--ink-500,#5B6472)}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar"><div><h1>Gestão de Campanhas</h1><div class="sub">Ciclo de vida completo — arrecadação é sempre lançamento manual confirmado, nunca clique ou acesso.</div></div></div>
+      <div class="alert-area"></div>
+
+      <div class="card">
+        <h2>Nova campanha</h2>
+        <form id="form-campanha">
+          <div class="grid-2">
+            <div><label>Título</label><input type="text" name="titulo" required></div>
+            <div><label>Slug (URL)</label><input type="text" name="slug" placeholder="ex.: minha-campanha"></div>
+          </div>
+          <label>Headline curta</label><input type="text" name="headline" placeholder="Frase de efeito para o card da Home">
+          <label>Descrição</label><textarea name="descricao" rows="2"></textarea>
+          <label>Texto completo (página da campanha)</label><textarea name="texto_completo" rows="3"></textarea>
+          <div class="grid-2">
+            <div><label>Meta financeira (R$)</label><input type="number" step="0.01" name="meta_valor"></div>
+            <div><label>Instituição beneficiada</label><input type="text" name="instituicao_beneficiada" placeholder="Deixe em branco se ainda não definida"></div>
+          </div>
+          <div class="grid-2">
+            <div><label>Data início</label><input type="date" name="data_inicio" required></div>
+            <div><label>Encerramento da arrecadação</label><input type="date" name="data_fim"></div>
+          </div>
+          <div class="grid-2">
+            <div><label>Data da entrega</label><input type="date" name="data_entrega"></div>
+            <div><label>Data do evento</label><input type="date" name="data_evento"></div>
+          </div>
+          <label>URL da imagem</label><input type="text" name="imagem_url">
+          <div class="grid-2">
+            <div><label>Status</label>
+              <select name="status">
+                <option value="rascunho">Rascunho</option>
+                <option value="ativa" selected>Ativa</option>
+                <option value="encerrada">Encerrada</option>
+                <option value="prestacao_contas">Prestação de contas</option>
+                <option value="arquivada">Arquivada</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:16px;padding-bottom:10px">
+              <label style="width:auto"><input type="checkbox" name="publicado" style="width:auto;display:inline-block;margin-right:6px">Publicado</label>
+              <label style="width:auto"><input type="checkbox" name="destaque_home" style="width:auto;display:inline-block;margin-right:6px">Destaque na Home</label>
+            </div>
+          </div>
+          <button type="submit" class="gold" style="margin-top:16px">Criar campanha</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Campanhas cadastradas</h2>
+        <table id="tbl-campanhas">
+          <thead><tr><th>Título</th><th>Status</th><th>Meta</th><th>Arrecadado (confirmado)</th><th>Destaque</th><th>Ações</th></tr></thead>
+          <tbody><tr><td colspan="6">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-fundo" id="modal-campanha">
+    <div class="modal-caixa">
+      <h3 id="modal-titulo">Campanha</h3>
+      <div class="modal-tabs">
+        <div class="modal-tab ativo" data-tab="dados">Dados & status</div>
+        <div class="modal-tab" data-tab="arrecadacao">Arrecadação</div>
+        <div class="modal-tab" data-tab="prestacao">Prestação de contas</div>
+      </div>
+
+      <div class="modal-painel ativo" id="painel-dados">
+        <form id="form-editar-campanha">
+          <input type="hidden" name="id_campanha">
+          <div class="grid-2">
+            <div><label>Título</label><input type="text" name="titulo" required></div>
+            <div><label>Instituição beneficiada</label><input type="text" name="instituicao_beneficiada"></div>
+          </div>
+          <label>Descrição</label><textarea name="descricao" rows="2"></textarea>
+          <label>Texto completo</label><textarea name="texto_completo" rows="3"></textarea>
+          <div class="grid-2">
+            <div><label>Meta (R$)</label><input type="number" step="0.01" name="meta_valor"></div>
+            <div><label>Status</label>
+              <select name="status">
+                <option value="rascunho">Rascunho</option>
+                <option value="ativa">Ativa</option>
+                <option value="encerrada">Encerrada</option>
+                <option value="prestacao_contas">Prestação de contas</option>
+                <option value="arquivada">Arquivada</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:16px;margin:10px 0">
+            <label style="width:auto"><input type="checkbox" name="publicado" style="width:auto;display:inline-block;margin-right:6px">Publicado</label>
+            <label style="width:auto"><input type="checkbox" name="destaque_home" style="width:auto;display:inline-block;margin-right:6px">Destaque na Home</label>
+          </div>
+          <button type="submit" class="gold">Salvar alterações</button>
+        </form>
+      </div>
+
+      <div class="modal-painel" id="painel-arrecadacao">
+        <div class="total-linha">Total confirmado: <span id="total-confirmado">R$ 0,00</span></div>
+        <div class="form-mini">
+          <div><label>Valor do lançamento (R$)</label><input type="number" step="0.01" id="lancamento-valor"></div>
+          <div><label>Observação</label><input type="text" id="lancamento-obs" placeholder="Ex.: PIX recebido dia 20/08"></div>
+          <button type="button" class="btn gold" id="btn-lancar">Lançar</button>
+        </div>
+        <p class="pedido-meta" style="margin:10px 0">Para corrigir um valor, lance um novo registro (inclusive negativo) — o histórico é append-only e auditado.</p>
+        <div id="lista-lancamentos" style="margin-top:14px"></div>
+      </div>
+
+      <div class="modal-painel" id="painel-prestacao">
+        <form id="form-prestacao">
+          <input type="hidden" name="id_campanha">
+          <div class="grid-2">
+            <div><label>Total aplicado (R$)</label><input type="number" step="0.01" name="total_aplicado"></div>
+            <div><label>Saldo (R$)</label><input type="number" step="0.01" name="saldo"></div>
+          </div>
+          <label>Destinação do saldo</label><input type="text" name="destinacao_saldo">
+          <div class="grid-2">
+            <div><label>Cestas entregues</label><input type="number" name="entregues_cestas"></div>
+            <div><label>Brinquedos entregues</label><input type="number" name="entregues_brinquedos"></div>
+          </div>
+          <label>Famílias / crianças beneficiadas</label><input type="number" name="criancas_familias_beneficiadas">
+          <label>Relatório / resultados (texto público)</label><textarea name="resultados_texto" rows="4"></textarea>
+          <label style="width:auto;display:block;margin-top:8px"><input type="checkbox" name="prestacao_contas_publicada" style="width:auto;display:inline-block;margin-right:6px">Publicar esta prestação de contas em /transparencia</label>
+          <button type="submit" class="gold" style="margin-top:12px">Salvar prestação de contas</button>
+        </form>
+        <hr style="margin:20px 0;border:none;border-top:1px solid var(--border,#DAD2C0)">
+        <h3 style="font-size:1rem">Documentos públicos</h3>
+        <div class="form-mini">
+          <div><label>Nome do documento</label><input type="text" id="doc-nome" placeholder="Ex.: Relatório final"></div>
+          <div><label>URL</label><input type="text" id="doc-url" placeholder="https://…"></div>
+          <button type="button" class="btn gold" id="btn-add-doc">Adicionar</button>
+        </div>
+        <div id="lista-documentos" style="margin-top:12px"></div>
+      </div>
+
+      <button type="button" class="btn ghost" id="modal-fechar" style="margin-top:18px">Fechar</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let sessao;
+    let campanhaAtualId = null;
+
+    const ROTULOS_STATUS = { rascunho: 'Rascunho', ativa: 'Ativa', encerrada: 'Encerrada', prestacao_contas: 'Prestação de contas', arquivada: 'Arquivada' };
+
+    function escapeHtml(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    async function carregarCampanhas() {
+      const { data, error } = await supabase.from('campanhas')
+        .select('id_campanha, titulo, status, meta_valor, total_arrecadado_confirmado, destaque_home, publicado')
+        .order('criado_em', { ascending: false });
+      const tbody = document.querySelector('#tbl-campanhas tbody');
+      if (error) { tbody.innerHTML = `<tr><td colspan="6">Erro: ${escapeHtml(error.message)}</td></tr>`; return; }
+      if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="6">Nenhuma campanha cadastrada.</td></tr>'; return; }
+      tbody.innerHTML = data.map(c => `
+        <tr>
+          <td>${escapeHtml(c.titulo)}</td>
+          <td><span class="badge ${c.status}">${ROTULOS_STATUS[c.status] || c.status}</span></td>
+          <td>${c.meta_valor ? formatarMoeda(c.meta_valor) : '—'}</td>
+          <td>${formatarMoeda(c.total_arrecadado_confirmado)}</td>
+          <td>${c.destaque_home ? 'sim' : 'não'}</td>
+          <td class="acoes-linha">
+            <button class="btn ghost" onclick="abrirCampanha('${c.id_campanha}')">Gerenciar</button>
+          </td>
+        </tr>`).join('');
+    }
+
+    document.getElementById('form-campanha').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await SGDE.comSessaoValida();
+        const fd = new FormData(e.target);
+        const { error } = await supabase.from('campanhas').insert({
+          titulo: fd.get('titulo'), slug: fd.get('slug') || null,
+          descricao: fd.get('descricao') || null, texto_completo: fd.get('texto_completo') || null,
+          meta_valor: fd.get('meta_valor') || null, instituicao_beneficiada: fd.get('instituicao_beneficiada') || null,
+          data_inicio: fd.get('data_inicio'), data_fim: fd.get('data_fim') || null,
+          data_entrega: fd.get('data_entrega') || null, data_evento: fd.get('data_evento') || null,
+          imagem_url: fd.get('imagem_url') || null, status: fd.get('status'),
+          publicado: fd.get('publicado') === 'on', destaque_home: fd.get('destaque_home') === 'on',
+          criado_por_id: sessao.usuario_id,
+        });
+        if (error) throw error;
+        mostrarSucesso('Campanha criada.'); e.target.reset(); carregarCampanhas();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    window.abrirCampanha = async function (id) {
+      campanhaAtualId = id;
+      const { data: c, error } = await supabase.from('campanhas').select('*').eq('id_campanha', id).maybeSingle();
+      if (error || !c) { mostrarErro('Não foi possível carregar a campanha.'); return; }
+      document.getElementById('modal-titulo').textContent = c.titulo;
+      const fD = document.getElementById('form-editar-campanha');
+      fD.id_campanha.value = c.id_campanha; fD.titulo.value = c.titulo || '';
+      fD.instituicao_beneficiada.value = c.instituicao_beneficiada || '';
+      fD.descricao.value = c.descricao || ''; fD.texto_completo.value = c.texto_completo || '';
+      fD.meta_valor.value = c.meta_valor || ''; fD.status.value = c.status || 'ativa';
+      fD.publicado.checked = !!c.publicado; fD.destaque_home.checked = !!c.destaque_home;
+
+      const fP = document.getElementById('form-prestacao');
+      fP.id_campanha.value = c.id_campanha;
+      fP.total_aplicado.value = c.total_aplicado || ''; fP.saldo.value = c.saldo || '';
+      fP.destinacao_saldo.value = c.destinacao_saldo || ''; fP.entregues_cestas.value = c.entregues_cestas || '';
+      fP.entregues_brinquedos.value = c.entregues_brinquedos || ''; fP.criancas_familias_beneficiadas.value = c.criancas_familias_beneficiadas || '';
+      fP.resultados_texto.value = c.resultados_texto || ''; fP.prestacao_contas_publicada.checked = !!c.prestacao_contas_publicada;
+
+      document.getElementById('total-confirmado').textContent = formatarMoeda(c.total_arrecadado_confirmado);
+      await carregarLancamentos(id);
+      await carregarDocumentos(id);
+      document.getElementById('modal-campanha').classList.add('aberto');
+    };
+
+    document.getElementById('form-editar-campanha').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await SGDE.comSessaoValida();
+        const fd = new FormData(e.target);
+        const { error } = await supabase.from('campanhas').update({
+          titulo: fd.get('titulo'), instituicao_beneficiada: fd.get('instituicao_beneficiada') || null,
+          descricao: fd.get('descricao') || null, texto_completo: fd.get('texto_completo') || null,
+          meta_valor: fd.get('meta_valor') || null, status: fd.get('status'),
+          publicado: fd.get('publicado') === 'on', destaque_home: fd.get('destaque_home') === 'on',
+        }).eq('id_campanha', fd.get('id_campanha'));
+        if (error) throw error;
+        mostrarSucesso('Alterações salvas.'); carregarCampanhas();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    async function carregarLancamentos(campanhaId) {
+      const { data } = await supabase.from('campanha_lancamentos')
+        .select('valor, observacao, data_lancamento, criado_em').eq('campanha_id', campanhaId).order('criado_em', { ascending: false });
+      const el = document.getElementById('lista-lancamentos');
+      if (!data || data.length === 0) { el.innerHTML = '<p class="pedido-meta">Nenhum lançamento ainda.</p>'; return; }
+      el.innerHTML = data.map(l => `
+        <div class="lancamento-linha">
+          <span>${new Date(l.data_lancamento + 'T00:00:00').toLocaleDateString('pt-BR')}${l.observacao ? ' · ' + escapeHtml(l.observacao) : ''}</span>
+          <span class="val">${formatarMoeda(l.valor)}</span>
+        </div>`).join('');
+    }
+
+    document.getElementById('btn-lancar').addEventListener('click', async () => {
+      try {
+        await SGDE.comSessaoValida();
+        const valor = parseFloat(document.getElementById('lancamento-valor').value);
+        if (!valor) { mostrarErro('Informe um valor.'); return; }
+        const obs = document.getElementById('lancamento-obs').value.trim() || null;
+        const { error } = await supabase.from('campanha_lancamentos').insert({
+          campanha_id: campanhaAtualId, valor, observacao: obs,
+        });
+        if (error) throw error;
+        document.getElementById('lancamento-valor').value = '';
+        document.getElementById('lancamento-obs').value = '';
+        mostrarSucesso('Lançamento registrado.');
+        const { data: c } = await supabase.from('campanhas').select('total_arrecadado_confirmado').eq('id_campanha', campanhaAtualId).maybeSingle();
+        document.getElementById('total-confirmado').textContent = formatarMoeda(c?.total_arrecadado_confirmado);
+        carregarLancamentos(campanhaAtualId);
+        carregarCampanhas();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    document.getElementById('form-prestacao').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await SGDE.comSessaoValida();
+        const fd = new FormData(e.target);
+        const { error } = await supabase.from('campanhas').update({
+          total_aplicado: fd.get('total_aplicado') || null, saldo: fd.get('saldo') || null,
+          destinacao_saldo: fd.get('destinacao_saldo') || null,
+          entregues_cestas: fd.get('entregues_cestas') || null, entregues_brinquedos: fd.get('entregues_brinquedos') || null,
+          criancas_familias_beneficiadas: fd.get('criancas_familias_beneficiadas') || null,
+          resultados_texto: fd.get('resultados_texto') || null,
+          prestacao_contas_publicada: fd.get('prestacao_contas_publicada') === 'on',
+        }).eq('id_campanha', fd.get('id_campanha'));
+        if (error) throw error;
+        mostrarSucesso('Prestação de contas salva.'); carregarCampanhas();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    async function carregarDocumentos(campanhaId) {
+      const { data } = await supabase.from('campanha_documentos').select('id_documento, nome, url, publico').eq('campanha_id', campanhaId).order('criado_em', { ascending: false });
+      const el = document.getElementById('lista-documentos');
+      if (!data || data.length === 0) { el.innerHTML = '<p class="pedido-meta">Nenhum documento.</p>'; return; }
+      el.innerHTML = data.map(d => `
+        <div class="lancamento-linha">
+          <span><a href="${d.url}" target="_blank" rel="noopener">${escapeHtml(d.nome)}</a> ${d.publico ? '<span class="badge conferido">público</span>' : '<span class="badge aberto">interno</span>'}</span>
+          <button class="btn ghost" onclick="alternarDocPublico('${d.id_documento}', ${d.publico})">${d.publico ? 'Tornar interno' : 'Publicar'}</button>
+        </div>`).join('');
+    }
+
+    window.alternarDocPublico = async function (id, atual) {
+      try {
+        await SGDE.comSessaoValida();
+        const { error } = await supabase.from('campanha_documentos').update({ publico: !atual }).eq('id_documento', id);
+        if (error) throw error;
+        carregarDocumentos(campanhaAtualId);
+      } catch (err) { mostrarErro(err.message); }
+    };
+
+    document.getElementById('btn-add-doc').addEventListener('click', async () => {
+      try {
+        await SGDE.comSessaoValida();
+        const nome = document.getElementById('doc-nome').value.trim();
+        const url = document.getElementById('doc-url').value.trim();
+        if (!nome || !url) { mostrarErro('Informe nome e URL do documento.'); return; }
+        const { error } = await supabase.from('campanha_documentos').insert({ campanha_id: campanhaAtualId, nome, url, publico: false });
+        if (error) throw error;
+        document.getElementById('doc-nome').value = ''; document.getElementById('doc-url').value = '';
+        mostrarSucesso('Documento adicionado (interno — publique quando quiser).');
+        carregarDocumentos(campanhaAtualId);
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    document.querySelectorAll('.modal-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('ativo'));
+        document.querySelectorAll('.modal-painel').forEach(p => p.classList.remove('ativo'));
+        tab.classList.add('ativo');
+        document.getElementById('painel-' + tab.dataset.tab).classList.add('ativo');
+      });
+    });
+
+    document.getElementById('modal-fechar').addEventListener('click', () => document.getElementById('modal-campanha').classList.remove('aberto'));
+    document.getElementById('modal-campanha').addEventListener('click', (e) => { if (e.target.id === 'modal-campanha') e.currentTarget.classList.remove('aberto'); });
+
+    (async function init() {
+      protegerPagina();
+      montarSidebar('campanhas.html');
+      sessao = SGDE.getSessao();
+      await SGDE.comSessaoValida();
+      await carregarCampanhas();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Instituições Indicadas</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .filtro-btn{border:1px solid var(--border,#DAD2C0);background:#fff;padding:7px 14px;border-radius:100px;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--ink-500,#5B6472)}
+  .filtro-btn.ativo{background:var(--navy-950,#0F1B2D);color:#fff;border-color:var(--navy-950,#0F1B2D)}
+  .badge.nova_indicacao{background:#F3DADD;color:#7A2E3A}
+  .badge.em_analise{background:#EFE4C8;color:#7A5A16}
+  .badge.contatada{background:#DDE6EF;color:#28405C}
+  .badge.parceira{background:#DCEAE1;color:#2F5C46}
+  .badge.nao_aderente{background:#EAEAEA;color:#666}
+  .badge.arquivada{background:#EAEAEA;color:#666}
+  select.status-select{width:auto;padding:5px 8px;font-size:.8rem}
+  .modal-fundo{position:fixed;inset:0;background:rgba(10,18,32,.5);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal-fundo.aberto{display:flex}
+  .modal-caixa{background:#fff;border-radius:14px;padding:28px 30px;max-width:520px;width:92%;max-height:80vh;overflow:auto}
+  .campo-detalhe{margin-bottom:10px;font-size:.9rem}
+  .campo-detalhe strong{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-500,#5B6472);margin-bottom:2px}
+  .pedido-meta{font-size:.78rem;color:var(--ink-500,#5B6472);margin-top:4px}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar"><div><h1>Instituições Indicadas</h1><div class="sub">Indicações enviadas via "Quero indicar uma instituição" no site público.</div></div></div>
+      <div class="alert-area"></div>
+
+      <div class="filtros" id="filtros">
+        <button type="button" class="filtro-btn ativo" data-status="">Todas</button>
+        <button type="button" class="filtro-btn" data-status="nova_indicacao">Novas</button>
+        <button type="button" class="filtro-btn" data-status="em_analise">Em análise</button>
+        <button type="button" class="filtro-btn" data-status="contatada">Contatadas</button>
+        <button type="button" class="filtro-btn" data-status="parceira">Parceiras</button>
+        <button type="button" class="filtro-btn" data-status="nao_aderente">Não aderentes</button>
+        <button type="button" class="filtro-btn" data-status="arquivada">Arquivadas</button>
+      </div>
+
+      <div class="card">
+        <table id="tbl-instituicoes">
+          <thead><tr><th>Instituição</th><th>Indicado por</th><th>Status</th><th></th></tr></thead>
+          <tbody><tr><td colspan="4">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-fundo" id="modal-inst">
+    <div class="modal-caixa">
+      <h3 id="modal-nome"></h3>
+      <div id="modal-detalhes"></div>
+      <button type="button" class="btn ghost" id="modal-fechar" style="margin-top:14px">Fechar</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let sessao;
+    let filtroAtual = '';
+    const ROTULOS = { nova_indicacao: 'Nova indicação', em_analise: 'Em análise', contatada: 'Contatada', parceira: 'Parceira', nao_aderente: 'Não aderente', arquivada: 'Arquivada' };
+
+    function escapeHtml(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    window.atualizarStatusInst = async function (id, status) {
+      try {
+        await SGDE.comSessaoValida();
+        const { error } = await supabase.from('instituicoes_indicadas').update({ status, atualizado_por_id: sessao.usuario_id, atualizado_em: new Date().toISOString() }).eq('id_instituicao', id);
+        if (error) throw error;
+        mostrarSucesso('Status atualizado.'); carregar();
+      } catch (err) { mostrarErro(err.message); }
+    };
+
+    let cacheInstituicoes = [];
+    window.abrirDetalhes = function (id) {
+      const i = cacheInstituicoes.find(x => x.id_instituicao === id);
+      if (!i) return;
+      document.getElementById('modal-nome').textContent = i.nome_instituicao;
+      const campos = [
+        ['Responsável', i.responsavel], ['Telefone', i.telefone], ['E-mail', i.email],
+        ['Endereço / região', i.endereco_regiao], ['Site / rede social', i.site_rede_social],
+        ['Atividade realizada', i.atividade_realizada], ['Público atendido', i.publico_atendido],
+        ['Como a ISSD poderia ajudar', i.como_issd_poderia_ajudar],
+        ['Indicado por', i.nome_indicante], ['Contato de quem indica', i.contato_indicante],
+      ];
+      document.getElementById('modal-detalhes').innerHTML = campos.filter(([, v]) => v)
+        .map(([k, v]) => `<div class="campo-detalhe"><strong>${k}</strong>${escapeHtml(v)}</div>`).join('');
+      document.getElementById('modal-inst').classList.add('aberto');
+    };
+    document.getElementById('modal-fechar').addEventListener('click', () => document.getElementById('modal-inst').classList.remove('aberto'));
+    document.getElementById('modal-inst').addEventListener('click', (e) => { if (e.target.id === 'modal-inst') e.currentTarget.classList.remove('aberto'); });
+
+    async function carregar() {
+      let query = supabase.from('instituicoes_indicadas').select('*').order('criado_em', { ascending: false }).limit(200);
+      if (filtroAtual) query = query.eq('status', filtroAtual);
+      const { data, error } = await query;
+      cacheInstituicoes = data || [];
+      const tbody = document.querySelector('#tbl-instituicoes tbody');
+      if (error) { tbody.innerHTML = `<tr><td colspan="4">Erro: ${escapeHtml(error.message)}</td></tr>`; return; }
+      if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Nenhuma indicação encontrada.</td></tr>'; return; }
+      tbody.innerHTML = data.map(i => `
+        <tr>
+          <td><a href="#" onclick="abrirDetalhes('${i.id_instituicao}'); return false;">${escapeHtml(i.nome_instituicao)}</a></td>
+          <td class="pedido-meta">${escapeHtml(i.nome_indicante || '—')}</td>
+          <td>
+            <select class="status-select" onchange="atualizarStatusInst('${i.id_instituicao}', this.value)">
+              ${Object.entries(ROTULOS).map(([k, r]) => `<option value="${k}" ${i.status === k ? 'selected' : ''}>${r}</option>`).join('')}
+            </select>
+          </td>
+          <td><button class="btn ghost" onclick="abrirDetalhes('${i.id_instituicao}')">Detalhes</button></td>
+        </tr>`).join('');
+    }
+
+    document.querySelectorAll('.filtro-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
+        btn.classList.add('ativo'); filtroAtual = btn.dataset.status; carregar();
+      });
+    });
+
+    (async function init() {
+      protegerPagina();
+      montarSidebar('instituicoes.html');
+      sessao = SGDE.getSessao();
+      await SGDE.comSessaoValida();
+      await carregar();
+    })();
+  </script>
+</body>
+</html>

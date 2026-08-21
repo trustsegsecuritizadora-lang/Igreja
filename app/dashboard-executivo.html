@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Visão Geral</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-bottom:24px}
+  .kpi-card{background:#fff;border:1px solid var(--border,#DAD2C0);border-radius:14px;padding:22px 24px}
+  .kpi-card .rotulo{font-size:.76rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-500,#5B6472);margin:0 0 8px}
+  .kpi-card .valor{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:1.9rem;color:var(--navy-950,#0F1B2D)}
+  .kpi-card .sub{font-size:.82rem;color:var(--ink-500,#5B6472);margin-top:4px}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar"><div><h1>Visão Geral</h1><div class="sub">Indicadores em tempo real, direto do banco — nenhum dado fictício.</div></div></div>
+      <div class="alert-area"></div>
+
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card"><p class="rotulo">Campanhas ativas</p><p class="valor" id="kpi-campanhas">—</p></div>
+        <div class="kpi-card"><p class="rotulo">Arrecadação confirmada</p><p class="valor" id="kpi-arrecadacao">—</p><p class="sub">soma de todas as campanhas ativas</p></div>
+        <div class="kpi-card"><p class="rotulo">Novos pedidos de oração</p><p class="valor" id="kpi-oracao">—</p></div>
+        <div class="kpi-card"><p class="rotulo">Voluntários cadastrados</p><p class="valor" id="kpi-voluntarios">—</p></div>
+        <div class="kpi-card"><p class="rotulo">Instituições indicadas</p><p class="valor" id="kpi-instituicoes">—</p></div>
+        <div class="kpi-card"><p class="rotulo">Conteúdos publicados</p><p class="valor" id="kpi-conteudos">—</p></div>
+        <div class="kpi-card" style="grid-column:span 2">
+          <p class="rotulo">Próximo evento</p>
+          <p class="valor" id="kpi-evento" style="font-size:1.2rem">—</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let sessao;
+
+    async function carregar() {
+      const [campanhasAtivas, oracaoNovos, voluntariosCount, instituicoesCount, conteudosCount, proximoEvento] = await Promise.all([
+        supabase.from('campanhas').select('total_arrecadado_confirmado').eq('status', 'ativa'),
+        supabase.from('pedidos_oracao').select('id_pedido', { count: 'exact', head: true }).eq('status', 'novo'),
+        supabase.from('voluntarios').select('id_voluntario', { count: 'exact', head: true }),
+        supabase.from('instituicoes_indicadas').select('id_instituicao', { count: 'exact', head: true }),
+        supabase.from('conteudos_proposito').select('id_conteudo', { count: 'exact', head: true }).eq('status', 'publicado'),
+        supabase.from('eventos').select('titulo, data_inicio').eq('publicado', true).gte('data_inicio', new Date().toISOString()).order('data_inicio').limit(1),
+      ]);
+
+      const campanhas = campanhasAtivas.data || [];
+      document.getElementById('kpi-campanhas').textContent = campanhas.length;
+      const totalArrecadado = campanhas.reduce((s, c) => s + (Number(c.total_arrecadado_confirmado) || 0), 0);
+      document.getElementById('kpi-arrecadacao').textContent = formatarMoeda(totalArrecadado);
+      document.getElementById('kpi-oracao').textContent = oracaoNovos.count || 0;
+      document.getElementById('kpi-voluntarios').textContent = voluntariosCount.count || 0;
+      document.getElementById('kpi-instituicoes').textContent = instituicoesCount.count || 0;
+      document.getElementById('kpi-conteudos').textContent = conteudosCount.count || 0;
+
+      const ev = (proximoEvento.data || [])[0];
+      document.getElementById('kpi-evento').textContent = ev
+        ? `${ev.titulo} — ${new Date(ev.data_inicio).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}`
+        : 'Nenhum evento programado no momento.';
+    }
+
+    (async function init() {
+      protegerPagina();
+      montarSidebar('dashboard-executivo.html');
+      sessao = SGDE.getSessao();
+      await SGDE.comSessaoValida();
+      await carregar();
+    })();
+  </script>
+</body>
+</html>

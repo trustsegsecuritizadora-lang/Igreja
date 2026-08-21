@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · 7 Minutos de Propósito</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .badge.rascunho{background:#EAEAEA;color:#666}
+  .badge.agendado{background:#EFE4C8;color:#7A5A16}
+  .badge.publicado{background:#DCEAE1;color:#2F5C46}
+  .badge.despublicado{background:#F3DADD;color:#7A2E3A}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal-fundo{position:fixed;inset:0;background:rgba(10,18,32,.5);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:36px 16px;overflow:auto}
+  .modal-fundo.aberto{display:flex}
+  .modal-caixa{background:#fff;border-radius:14px;padding:28px 30px;max-width:700px;width:100%}
+  .pedido-meta{font-size:.78rem;color:var(--ink-500,#5B6472)}
+  .acoes-linha{display:flex;gap:6px;flex-wrap:wrap}
+  .acoes-linha .btn{font-size:.76rem;padding:5px 10px}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar"><div><h1>7 Minutos de Propósito</h1><div class="sub">CMS de conteúdos publicados em /proposito no site.</div></div></div>
+      <div class="alert-area"></div>
+
+      <div class="card">
+        <h2>Novo conteúdo</h2>
+        <form id="form-conteudo">
+          <div class="grid-2">
+            <div><label>Título</label><input type="text" name="titulo" required></div>
+            <div><label>Slug (URL)</label><input type="text" name="slug" required placeholder="ex.: titulo-do-artigo"></div>
+          </div>
+          <label>Subtítulo</label><input type="text" name="subtitulo">
+          <div class="grid-2">
+            <div><label>Autor</label><input type="text" name="autor" value="Igreja Salvador do Sétimo Dia"></div>
+            <div><label>Categoria</label><input type="text" name="categoria" value="Propósito"></div>
+          </div>
+          <label>URL da imagem (opcional)</label><input type="text" name="imagem_url">
+          <label>Conteúdo (HTML — use parágrafos &lt;p&gt;…&lt;/p&gt;)</label>
+          <textarea name="conteudo" rows="10" required></textarea>
+          <div class="grid-2">
+            <div><label>Tempo de leitura (min)</label><input type="number" name="tempo_leitura_min" value="7"></div>
+            <div><label>Data de publicação</label><input type="date" name="data_publicacao"></div>
+          </div>
+          <label>SEO title</label><input type="text" name="seo_title">
+          <label>Meta description</label><input type="text" name="meta_description">
+          <div class="grid-2">
+            <div><label>Status</label>
+              <select name="status">
+                <option value="rascunho">Rascunho</option>
+                <option value="agendado">Agendado</option>
+                <option value="publicado">Publicado</option>
+                <option value="despublicado">Despublicado</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end;padding-bottom:10px">
+              <label style="width:auto"><input type="checkbox" name="destaque" style="width:auto;display:inline-block;margin-right:6px">Destaque</label>
+            </div>
+          </div>
+          <button type="submit" class="gold" style="margin-top:16px">Criar conteúdo</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Conteúdos cadastrados</h2>
+        <table id="tbl-conteudos">
+          <thead><tr><th>Título</th><th>Categoria</th><th>Status</th><th>Publicação</th><th>Ações</th></tr></thead>
+          <tbody><tr><td colspan="5">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-fundo" id="modal-editar">
+    <div class="modal-caixa">
+      <h3>Editar conteúdo</h3>
+      <form id="form-editar">
+        <input type="hidden" name="id_conteudo">
+        <div class="grid-2">
+          <div><label>Título</label><input type="text" name="titulo" required></div>
+          <div><label>Slug</label><input type="text" name="slug" required></div>
+        </div>
+        <label>Subtítulo</label><input type="text" name="subtitulo">
+        <label>Conteúdo (HTML)</label><textarea name="conteudo" rows="10" required></textarea>
+        <div class="grid-2">
+          <div><label>Status</label>
+            <select name="status">
+              <option value="rascunho">Rascunho</option>
+              <option value="agendado">Agendado</option>
+              <option value="publicado">Publicado</option>
+              <option value="despublicado">Despublicado</option>
+            </select>
+          </div>
+          <div><label>Data de publicação</label><input type="date" name="data_publicacao"></div>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:16px">
+          <button type="submit" class="gold">Salvar</button>
+          <button type="button" class="btn ghost" id="modal-fechar">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let sessao;
+    const ROTULOS = { rascunho: 'Rascunho', agendado: 'Agendado', publicado: 'Publicado', despublicado: 'Despublicado' };
+    function escapeHtml(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    async function carregar() {
+      const { data, error } = await supabase.from('conteudos_proposito')
+        .select('id_conteudo, titulo, categoria, status, data_publicacao').order('criado_em', { ascending: false });
+      const tbody = document.querySelector('#tbl-conteudos tbody');
+      if (error) { tbody.innerHTML = `<tr><td colspan="5">Erro: ${escapeHtml(error.message)}</td></tr>`; return; }
+      if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="5">Nenhum conteúdo cadastrado.</td></tr>'; return; }
+      tbody.innerHTML = data.map(c => `
+        <tr>
+          <td>${escapeHtml(c.titulo)}</td>
+          <td class="pedido-meta">${escapeHtml(c.categoria || '—')}</td>
+          <td><span class="badge ${c.status}">${ROTULOS[c.status] || c.status}</span></td>
+          <td class="pedido-meta">${c.data_publicacao ? new Date(c.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+          <td class="acoes-linha">
+            <button class="btn ghost" onclick="abrirEdicao('${c.id_conteudo}')">Editar</button>
+          </td>
+        </tr>`).join('');
+    }
+
+    document.getElementById('form-conteudo').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await SGDE.comSessaoValida();
+        const fd = new FormData(e.target);
+        const { error } = await supabase.from('conteudos_proposito').insert({
+          titulo: fd.get('titulo'), subtitulo: fd.get('subtitulo') || null, autor: fd.get('autor') || null,
+          categoria: fd.get('categoria') || null, imagem_url: fd.get('imagem_url') || null,
+          conteudo: fd.get('conteudo'), slug: fd.get('slug'),
+          tempo_leitura_min: fd.get('tempo_leitura_min') || null, data_publicacao: fd.get('data_publicacao') || null,
+          seo_title: fd.get('seo_title') || null, meta_description: fd.get('meta_description') || null,
+          status: fd.get('status'), destaque: fd.get('destaque') === 'on', criado_por_id: sessao.usuario_id,
+        });
+        if (error) throw error;
+        mostrarSucesso('Conteúdo criado.'); e.target.reset(); carregar();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    let cacheConteudos = [];
+    window.abrirEdicao = async function (id) {
+      const { data: c, error } = await supabase.from('conteudos_proposito').select('*').eq('id_conteudo', id).maybeSingle();
+      if (error || !c) { mostrarErro('Não foi possível carregar.'); return; }
+      const f = document.getElementById('form-editar');
+      f.id_conteudo.value = c.id_conteudo; f.titulo.value = c.titulo; f.slug.value = c.slug;
+      f.subtitulo.value = c.subtitulo || ''; f.conteudo.value = c.conteudo || '';
+      f.status.value = c.status; f.data_publicacao.value = c.data_publicacao || '';
+      document.getElementById('modal-editar').classList.add('aberto');
+    };
+
+    document.getElementById('form-editar').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await SGDE.comSessaoValida();
+        const fd = new FormData(e.target);
+        const { error } = await supabase.from('conteudos_proposito').update({
+          titulo: fd.get('titulo'), slug: fd.get('slug'), subtitulo: fd.get('subtitulo') || null,
+          conteudo: fd.get('conteudo'), status: fd.get('status'), data_publicacao: fd.get('data_publicacao') || null,
+          atualizado_em: new Date().toISOString(),
+        }).eq('id_conteudo', fd.get('id_conteudo'));
+        if (error) throw error;
+        mostrarSucesso('Conteúdo atualizado.'); document.getElementById('modal-editar').classList.remove('aberto'); carregar();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    document.getElementById('modal-fechar').addEventListener('click', () => document.getElementById('modal-editar').classList.remove('aberto'));
+    document.getElementById('modal-editar').addEventListener('click', (e) => { if (e.target.id === 'modal-editar') e.currentTarget.classList.remove('aberto'); });
+
+    (async function init() {
+      protegerPagina();
+      montarSidebar('conteudos.html');
+      sessao = SGDE.getSessao();
+      await SGDE.comSessaoValida();
+      await carregar();
+    })();
+  </script>
+</body>
+</html>
