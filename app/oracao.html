@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGDE · Pedidos de Oração</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .filtro-btn{
+    border:1px solid var(--border,#DAD2C0);background:#fff;padding:7px 14px;border-radius:100px;
+    font-size:.8rem;font-weight:600;cursor:pointer;color:var(--ink-500,#5B6472);
+  }
+  .filtro-btn.ativo{background:var(--navy-950,#0F1B2D);color:#fff;border-color:var(--navy-950,#0F1B2D)}
+  .contador-novos{
+    display:inline-flex;align-items:center;gap:6px;background:#F3DADD;color:#7A2E3A;
+    padding:5px 12px;border-radius:100px;font-size:.82rem;font-weight:700;margin-left:10px;
+  }
+  table#tbl-oracao td{vertical-align:top}
+  .pedido-texto{max-width:360px;white-space:pre-wrap;line-height:1.5}
+  .pedido-meta{font-size:.78rem;color:var(--ink-500,#5B6472);margin-top:4px}
+  .acoes-linha{display:flex;gap:6px;flex-wrap:wrap}
+  .acoes-linha .btn{font-size:.76rem;padding:5px 10px}
+  .badge.novo{background:#F3DADD;color:#7A2E3A}
+  .badge.visualizado{background:#EFE4C8;color:#7A5A16}
+  .badge.em_oracao{background:#DDE6EF;color:#28405C}
+  .badge.concluido{background:#DCEAE1;color:#2F5C46}
+  .badge.arquivado{background:#EAEAEA;color:#666}
+  .modal-fundo{position:fixed;inset:0;background:rgba(10,18,32,.5);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal-fundo.aberto{display:flex}
+  .modal-caixa{background:#fff;border-radius:14px;padding:28px 30px;max-width:480px;width:92%;max-height:80vh;overflow:auto}
+  .modal-caixa h3{margin:0 0 12px}
+  .modal-caixa .pedido-completo{white-space:pre-wrap;line-height:1.6;background:#F7F4EE;padding:16px;border-radius:10px;margin:12px 0}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"></aside>
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h1>Pedidos de Oração <span class="contador-novos" id="contador-novos" style="display:none"></span></h1>
+          <div class="sub">Enviados pelo site público. Nunca exibidos publicamente — apenas a equipe autorizada vê esta lista.</div>
+        </div>
+      </div>
+      <div class="alert-area"></div>
+
+      <div class="filtros" id="filtros">
+        <button type="button" class="filtro-btn ativo" data-status="">Todos</button>
+        <button type="button" class="filtro-btn" data-status="novo">Novos</button>
+        <button type="button" class="filtro-btn" data-status="visualizado">Visualizados</button>
+        <button type="button" class="filtro-btn" data-status="em_oracao">Em oração</button>
+        <button type="button" class="filtro-btn" data-status="concluido">Concluídos</button>
+        <button type="button" class="filtro-btn" data-status="arquivado">Arquivados</button>
+      </div>
+
+      <div class="card">
+        <table id="tbl-oracao">
+          <thead><tr><th>Data</th><th>Nome</th><th>Pedido</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody><tr><td colspan="5">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-fundo" id="modal-pedido">
+    <div class="modal-caixa">
+      <h3>Pedido de oração</h3>
+      <div class="pedido-meta" id="modal-meta"></div>
+      <div class="pedido-completo" id="modal-texto"></div>
+      <button type="button" class="btn ghost" id="modal-fechar">Fechar</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    let sessao;
+    let filtroAtual = '';
+
+    const ROTULOS_STATUS = {
+      novo: 'Novo', visualizado: 'Visualizado', em_oracao: 'Em oração',
+      concluido: 'Concluído', arquivado: 'Arquivado',
+    };
+
+    function escapeHtml(s) {
+      return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    async function atualizarStatus(id, novoStatus) {
+      try {
+        await SGDE.comSessaoValida();
+        const patch = { status: novoStatus };
+        if (novoStatus === 'visualizado') patch.visualizado_em = new Date().toISOString();
+        if (novoStatus === 'concluido') patch.concluido_em = new Date().toISOString();
+        if (novoStatus === 'arquivado') patch.arquivado_em = new Date().toISOString();
+        patch.atualizado_por_id = sessao.usuario_id;
+        const { error } = await supabase.from('pedidos_oracao').update(patch).eq('id_pedido', id);
+        if (error) throw error;
+        mostrarSucesso('Status atualizado.');
+        carregarPedidos();
+      } catch (err) { mostrarErro(err.message); }
+    }
+    window.atualizarStatusOracao = atualizarStatus;
+
+    window.abrirPedido = function (id, nome, pedido, criado, status) {
+      document.getElementById('modal-meta').textContent = `${nome} · ${criado} · ${ROTULOS_STATUS[status] || status}`;
+      document.getElementById('modal-texto').textContent = pedido;
+      document.getElementById('modal-pedido').classList.add('aberto');
+      if (status === 'novo') atualizarStatus(id, 'visualizado');
+    };
+
+    document.getElementById('modal-fechar').addEventListener('click', () => {
+      document.getElementById('modal-pedido').classList.remove('aberto');
+    });
+    document.getElementById('modal-pedido').addEventListener('click', (e) => {
+      if (e.target.id === 'modal-pedido') e.currentTarget.classList.remove('aberto');
+    });
+
+    async function carregarPedidos() {
+      let query = supabase.from('pedidos_oracao')
+        .select('id_pedido, nome, telefone, email, pedido, anonimo, status, criado_em')
+        .order('criado_em', { ascending: false })
+        .limit(100);
+      if (filtroAtual) query = query.eq('status', filtroAtual);
+      const { data, error } = await query;
+
+      const { count: novos } = await supabase.from('pedidos_oracao')
+        .select('id_pedido', { count: 'exact', head: true }).eq('status', 'novo');
+      const contadorEl = document.getElementById('contador-novos');
+      if (novos) { contadorEl.style.display = 'inline-flex'; contadorEl.textContent = `${novos} novo${novos > 1 ? 's' : ''}`; }
+      else { contadorEl.style.display = 'none'; }
+
+      const tbody = document.querySelector('#tbl-oracao tbody');
+      if (error) { tbody.innerHTML = `<tr><td colspan="5">Erro ao carregar: ${escapeHtml(error.message)}</td></tr>`; return; }
+      if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="5">Nenhum pedido nesta categoria.</td></tr>'; return; }
+
+      tbody.innerHTML = data.map(p => {
+        const nome = p.anonimo ? 'Anônimo' : (p.nome || '— sem nome —');
+        const contato = p.anonimo ? '' : [p.telefone, p.email].filter(Boolean).join(' · ');
+        const criado = new Date(p.criado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        const pedidoResumo = (p.pedido || '').slice(0, 140) + (p.pedido.length > 140 ? '…' : '');
+        const argsAbrir = `'${p.id_pedido}', ${JSON.stringify(nome)}, ${JSON.stringify(p.pedido)}, ${JSON.stringify(criado)}, '${p.status}'`;
+        return `<tr>
+          <td class="pedido-meta">${criado}</td>
+          <td>${escapeHtml(nome)}${contato ? `<div class="pedido-meta">${escapeHtml(contato)}</div>` : ''}</td>
+          <td class="pedido-texto"><a href="#" onclick='abrirPedido(${argsAbrir}); return false;'>${escapeHtml(pedidoResumo)}</a></td>
+          <td><span class="badge ${p.status}">${ROTULOS_STATUS[p.status] || p.status}</span></td>
+          <td>
+            <div class="acoes-linha">
+              ${p.status === 'novo' ? `<button class="btn ghost" onclick="atualizarStatusOracao('${p.id_pedido}','visualizado')">Visualizar</button>` : ''}
+              ${p.status !== 'em_oracao' && p.status !== 'concluido' && p.status !== 'arquivado' ? `<button class="btn ghost" onclick="atualizarStatusOracao('${p.id_pedido}','em_oracao')">Em oração</button>` : ''}
+              ${p.status !== 'concluido' && p.status !== 'arquivado' ? `<button class="btn ghost" onclick="atualizarStatusOracao('${p.id_pedido}','concluido')">Concluir</button>` : ''}
+              ${p.status !== 'arquivado' ? `<button class="btn ghost" onclick="atualizarStatusOracao('${p.id_pedido}','arquivado')">Arquivar</button>` : ''}
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    document.querySelectorAll('.filtro-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
+        btn.classList.add('ativo');
+        filtroAtual = btn.dataset.status;
+        carregarPedidos();
+      });
+    });
+
+    (async function init() {
+      protegerPagina();
+      montarSidebar('oracao.html');
+      sessao = SGDE.getSessao();
+      await SGDE.comSessaoValida();
+      await carregarPedidos();
+    })();
+  </script>
+</body>
+</html>
