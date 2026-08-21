@@ -4,137 +4,56 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eventos & Campanhas · Igreja Salvador do Sétimo Dia</title>
-<meta name="description" content="Próximos eventos e campanhas da igreja.">
-<link rel="stylesheet" href="../app/css/style.css">
+<meta name="description" content="Próximos eventos e campanhas em andamento da Igreja Salvador do Sétimo Dia.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Eventos & Campanhas · ISSD">
+<meta property="og:description" content="Acompanhe o que está acontecendo e participe.">
+<meta property="og:url" content="https://salvadordosetimodia.com.br/eventos.html">
+<meta name="theme-color" content="#0A1220">
+<link rel="stylesheet" href="css/site.css">
 <style>
-  :root{
-    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-  *{box-sizing:border-box}
-
-  .textured{position:relative;isolation:isolate}
-  .textured::before{
-    content:"";position:absolute;inset:0;background-image:var(--grain);
-    opacity:.05;mix-blend-mode:overlay;pointer-events:none;z-index:0;
-  }
-  .textured > *{position:relative;z-index:1}
-
-  .pubnav{
-    max-width:1040px;margin:0 auto;padding:20px 24px 0;
-    display:flex;align-items:center;gap:26px;
-  }
-  .pubnav a{
-    color:var(--parchment-100);opacity:.7;text-decoration:none;
-    font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600;
-    padding-bottom:4px;border-bottom:1px solid transparent;
-  }
-  .pubnav a:hover,.pubnav a.active{opacity:1;color:var(--gold-300);border-color:rgba(216,188,138,.5)}
-  .pubnav .area-interna{
-    margin-left:auto;opacity:1;border:1px solid rgba(216,188,138,.4);
-    padding:8px 18px;border-radius:999px;font-size:.76rem;letter-spacing:.06em;
-  }
-  .pubnav .area-interna:hover{border-color:var(--gold-300);background:rgba(184,147,90,.14)}
-
-  .hero{
-    background:
-      radial-gradient(ellipse 900px 420px at 50% -10%, rgba(216,188,138,.14), transparent 60%),
-      linear-gradient(175deg,var(--navy-950),var(--navy-800) 65%,var(--navy-700));
-    color:var(--parchment-100);padding:16px 20px 56px;text-align:center;overflow:hidden;
-  }
-  .hero h1{color:var(--parchment-50);font-size:2.1rem;margin:26px 0 8px}
-  .hero p{opacity:.78;max-width:520px;margin:0 auto}
-
-  .wrap{max-width:1040px;margin:0 auto;padding:40px 20px}
-  .evento-card,.campanha-card{display:grid;grid-template-columns:220px 1fr;gap:22px;margin-bottom:22px}
-  .evento-card img,.campanha-card img{width:220px;height:140px;object-fit:cover;border-radius:var(--radius);background:var(--parchment-100)}
-  @media(max-width:640px){.evento-card,.campanha-card{grid-template-columns:1fr}.evento-card img,.campanha-card img{width:100%}}
-  .barra{height:8px;background:var(--parchment-100);border-radius:100px;overflow:hidden;margin:10px 0}
-  .barra > div{height:100%;background:var(--gold-500)}
-  footer{text-align:center;padding:30px;color:var(--ink-500);font-size:.8rem}
-  .form-inscricao{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
-  .form-inscricao input{flex:1;min-width:160px}
-
-  /* ---------- doação via PIX (mesmo cartão premium da home) ---------- */
-  .secao-pix{border-radius:18px;overflow:hidden;margin-top:56px}
+  .eventos-hero{padding:16px 20px 56px}
+  .eventos-hero-inner{max-width:640px;margin:0 auto;padding-top:36px;text-align:center}
+  .eventos-hero h1{color:var(--parchment-50);font-size:clamp(1.9rem,4vw,2.4rem);margin:0 0 10px}
+  .eventos-hero p{opacity:.78;margin:0}
+  .secao-pix{border-radius:18px;overflow:hidden;margin:88px 24px 0}
   .secao-pix .miolo{
-    background:linear-gradient(155deg,var(--navy-950),var(--navy-800) 55%,var(--navy-700));
-    padding:54px 20px;text-align:center;
-  }
-  .secao-pix .eyebrow{
-    font-family:'EB Garamond',serif;font-weight:600;letter-spacing:.24em;text-transform:uppercase;
-    font-size:.78rem;color:var(--gold-300);margin:0 0 8px;
+    background:linear-gradient(155deg,var(--ink-1000),var(--navy-800) 55%,var(--navy-700));
+    padding:56px 20px;text-align:center;
   }
   .secao-pix h2{color:var(--parchment-50);margin:0 0 10px}
-  .secao-pix .desc{color:var(--parchment-100);opacity:.78;max-width:440px;margin:0 auto 26px;line-height:1.6}
-
-  .qr-card{
-    background:linear-gradient(165deg,#152238,var(--navy-950));
-    border:1px solid rgba(216,188,138,.22);
-    border-radius:18px;padding:30px 28px 26px;
-    box-shadow:0 20px 50px rgba(0,0,0,.35);
-    text-align:center;max-width:340px;margin:0 auto;
-    position:relative;isolation:isolate;
-  }
-  .qr-card::before{
-    content:"";position:absolute;inset:0;border-radius:18px;background-image:var(--grain);
-    opacity:.06;mix-blend-mode:overlay;pointer-events:none;
-  }
-  .qr-card .qr-kicker{
-    font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-300);
-    margin:0 0 14px;font-weight:600;position:relative;
-  }
-  .qr-frame{
-    background:var(--parchment-50);border-radius:12px;padding:14px;
-    display:inline-block;position:relative;
-  }
-  .qr-frame img{display:block;width:200px;height:200px;border-radius:4px}
-  .qr-card .aponte{
-    margin:16px 0 0;font-size:.86rem;color:var(--parchment-100);opacity:.85;position:relative;
-  }
-  .chave-pix-linha{
-    margin-top:18px;padding-top:16px;border-top:1px solid rgba(216,188,138,.2);
-    display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;position:relative;
-  }
-  .chave-pix-linha code{
-    background:rgba(216,188,138,.1);border:1px solid rgba(216,188,138,.25);
-    color:var(--gold-300);padding:6px 10px;border-radius:7px;font-size:.78rem;
-    max-width:100%;overflow-wrap:anywhere;
-  }
-  .chave-pix-linha button{
-    background:transparent;border:1px solid rgba(216,188,138,.4);color:var(--parchment-100);
-    padding:6px 12px;border-radius:999px;font-size:.76rem;cursor:pointer;width:auto;
-  }
-  .chave-pix-linha button:hover{border-color:var(--gold-300);color:var(--gold-300)}
+  .secao-pix .desc{color:var(--parchment-100);opacity:.78;max-width:460px;margin:0 auto 26px;line-height:1.6}
 </style>
 </head>
 <body>
-  <div class="hero textured">
+  <header class="hero textured eventos-hero">
     <nav class="pubnav">
       <a href="index.html">Início</a>
-      <a href="eventos.html" class="active">Eventos & Campanhas</a>
+      <a href="index.html#campanhas">Campanhas</a>
+      <a href="eventos.html" class="active">Eventos</a>
       <a class="area-interna" href="https://sistema.salvadordosetimodia.com.br/login.html">Área interna</a>
     </nav>
-    <h1>Eventos & Campanhas</h1>
-    <p>Acompanhe o que está acontecendo e participe.</p>
-  </div>
+    <div class="eventos-hero-inner">
+      <h1>Eventos & Campanhas</h1>
+      <p>Acompanhe o que está acontecendo e participe.</p>
+    </div>
+  </header>
 
-  <div class="wrap">
-    <section>
-      <h2 class="liturgica">Próximos eventos</h2>
-      <div class="divisor"></div>
-      <div id="lista-eventos">Carregando…</div>
-    </section>
+  <section class="wrap tight" style="padding-top:56px">
+    <p class="eyebrow">Agenda</p>
+    <h2 class="section-title">Próximos eventos</h2>
+    <div id="lista-eventos" style="margin-top:32px">Carregando…</div>
+  </section>
 
-    <section style="margin-top:40px">
-      <h2 class="liturgica">Campanhas em andamento</h2>
-      <div class="divisor"></div>
-      <div id="lista-campanhas">Carregando…</div>
-    </section>
-  </div>
+  <section class="wrap tight" style="padding-top:8px">
+    <p class="eyebrow">Propósito em ação</p>
+    <h2 class="section-title">Campanhas em andamento</h2>
+    <div id="lista-campanhas" class="campanhas-grid" style="margin-top:32px">Carregando…</div>
+  </section>
 
   <section class="secao-pix textured">
     <div class="miolo">
-      <p class="eyebrow">Doação avulsa</p>
+      <p class="eyebrow on-dark">Doação avulsa</p>
       <h2 class="liturgica">Contribua via PIX</h2>
       <p class="desc">Quer contribuir fora de uma campanha específica? Aponte a câmera do seu banco para o QR Code ou use a chave abaixo.</p>
       <div class="qr-card">
@@ -151,19 +70,17 @@
     </div>
   </section>
 
-  <footer>SGDE — Sistema de Gestão Digital Eclesiástico</footer>
+  <footer class="rodape-premium" style="margin-top:0">
+    <div class="rodape-base" style="margin-top:0;border-top:none;padding-top:0">
+      <span>© <span id="ano-atual"></span> Igreja Salvador do Sétimo Dia</span>
+      <a class="area-interna-discreta" href="https://sistema.salvadordosetimodia.com.br/login.html">Área Interna / SGDE</a>
+    </div>
+  </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/site.js"></script>
   <script>
-    // Este site é 100% público: usa só a anon key (sem login), e a RLS no
-    // banco garante que só linhas com publicado=true chegam até aqui.
-    const SUPABASE_URL = 'https://fragxrqofweahrhgozhq.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZyYWd4cnFvZndlYWhyaGdvemhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzcyNzUsImV4cCI6MjEwMjgxMzI3NX0.A1mEQtBloGuuJJt9QhL7002RHCgBKOV5dIPdCsTvVyo';
-    window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    function formatarMoeda(v) {
-      return (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    }
+    document.getElementById('ano-atual').textContent = new Date().getFullYear();
 
     async function carregarEventos() {
       const { data, error } = await supabase.from('eventos')
@@ -172,24 +89,21 @@
 
       const el = document.getElementById('lista-eventos');
       if (error || !data || data.length === 0) {
-        el.innerHTML = '<p>Nenhum evento programado no momento.</p>';
+        el.innerHTML = '<p style="color:var(--ink-500)">Nenhum evento programado no momento.</p>';
         return;
       }
       el.innerHTML = data.map(ev => `
-        <div class="card evento-card">
-          <img src="${ev.imagem_url || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22220%22 height=%22140%22%3E%3Crect width=%22220%22 height=%22140%22 fill=%22%23EFE9DD%22/%3E%3C/svg%3E'}" alt="">
+        <div class="evento-card">
+          <div class="capa"><img src="${ev.imagem_url || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22220%22 height=%22140%22%3E%3Crect width=%22220%22 height=%22140%22 fill=%22%23EFE9DD%22/%3E%3C/svg%3E'}" alt="" loading="lazy"></div>
           <div>
-            <h3 style="margin:0 0 4px">${ev.titulo}</h3>
-            <div class="sub" style="margin-bottom:8px">
-              ${new Date(ev.data_inicio).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}
-              ${ev.local ? ' · ' + ev.local : ''}
-            </div>
-            <p style="font-size:.9rem">${ev.descricao || ''}</p>
+            <h3>${ev.titulo}</h3>
+            <div class="quando">${new Date(ev.data_inicio).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}${ev.local ? ' · ' + ev.local : ''}</div>
+            <p>${ev.descricao || ''}</p>
             ${ev.inscricao_aberta ? `
               <form class="form-inscricao" data-evento="${ev.id_evento}">
                 <input type="text" name="nome" placeholder="Seu nome" required>
                 <input type="text" name="contato" placeholder="E-mail ou telefone" required>
-                <button type="submit" class="gold">Inscrever-se</button>
+                <button type="submit" class="btn btn-primario">Inscrever-se</button>
               </form>
               <div class="msg" style="font-size:.85rem;margin-top:6px"></div>
             ` : ''}
@@ -214,55 +128,46 @@
 
     async function carregarCampanhas() {
       const { data: campanhas, error } = await supabase.from('campanhas')
-        .select('id_campanha, titulo, descricao, meta_valor, data_fim, imagem_url')
-        .eq('publicado', true).order('data_fim');
+        .select('id_campanha, titulo, descricao, meta_valor, data_fim, slug, categoria')
+        .eq('publicado', true).order('criado_em');
 
       const el = document.getElementById('lista-campanhas');
       if (error || !campanhas || campanhas.length === 0) {
-        el.innerHTML = '<p>Nenhuma campanha ativa no momento.</p>';
+        el.innerHTML = '<p style="color:var(--ink-500)">Nenhuma campanha ativa no momento.</p>';
         return;
       }
 
-      const { data: progresso } = await supabase.rpc('campanha_progresso_publica');
-      const progressoPorId = Object.fromEntries((progresso || []).map(p => [p.id_campanha, p]));
+      const progresso = await carregarProgressoCampanhas();
+      const paginaPorSlug = { 'nossa-casa-nosso-proposito': 'campanhas/nossa-casa-nosso-proposito.html',
+                               'um-dia-para-sorrir': 'campanhas/um-dia-para-sorrir.html' };
 
       el.innerHTML = campanhas.map(c => {
-        const p = progressoPorId[c.id_campanha];
-        const arrecadado = p ? Number(p.valor_arrecadado) : 0;
-        const pct = c.meta_valor ? Math.min(100, Math.round((arrecadado / c.meta_valor) * 100)) : null;
+        const arrecadado = progresso[c.id_campanha] || 0;
+        const pct = c.meta_valor ? Math.min(100, Math.round((arrecadado / c.meta_valor) * 100)) : 0;
+        const link = (c.slug && paginaPorSlug[c.slug]) || '#';
+        const tag = c.categoria === 'dia_das_criancas' ? 'Dia das Crianças 2026' : 'Campanha institucional';
         return `
-        <div class="card campanha-card">
-          <img src="${c.imagem_url || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22220%22 height=%22140%22%3E%3Crect width=%22220%22 height=%22140%22 fill=%22%23EFE9DD%22/%3E%3C/svg%3E'}" alt="">
-          <div>
-            <h3 style="margin:0 0 4px">${c.titulo}</h3>
-            ${c.data_fim ? `<div class="sub" style="margin-bottom:8px">Até ${new Date(c.data_fim).toLocaleDateString('pt-BR')}</div>` : ''}
-            <p style="font-size:.9rem">${c.descricao || ''}</p>
+        <a class="campanha-card" href="${link}">
+          <div class="capa"><span class="tag">${tag}</span></div>
+          <div class="miolo">
+            <h3>${c.titulo}</h3>
+            <p class="desc">${(c.descricao || '').slice(0, 150)}${(c.descricao || '').length > 150 ? '…' : ''}</p>
             ${c.meta_valor ? `
               <div class="barra"><div style="width:${pct}%"></div></div>
-              <div class="sub">${formatarMoeda(arrecadado)} de ${formatarMoeda(c.meta_valor)} (${pct}%)</div>
+              <div class="progresso-linha"><span class="valor">${formatarMoeda(arrecadado)}</span><span class="pct">${pct}% da meta</span></div>
             ` : ''}
+            <div class="rodape">
+              <span class="saiba-mais">Conhecer a campanha →</span>
+              ${c.data_fim ? `<span class="contador-mini">${diasRestantes(c.data_fim)} dias restantes</span>` : ''}
+            </div>
           </div>
-        </div>`;
+        </a>`;
       }).join('');
-    }
-
-    async function carregarPix() {
-      const { data } = await supabase.from('configuracoes_publicas').select('valor').eq('chave', 'pix_doacao_avulsa').maybeSingle();
-      if (data && data.valor) {
-        document.getElementById('chave-pix').textContent = data.valor;
-        document.getElementById('chave-pix-wrap').style.display = 'flex';
-        document.getElementById('btn-copiar-pix').addEventListener('click', () => {
-          navigator.clipboard.writeText(data.valor);
-          const btn = document.getElementById('btn-copiar-pix');
-          btn.textContent = 'Copiado!';
-          setTimeout(() => { btn.textContent = 'Copiar chave'; }, 2000);
-        });
-      }
     }
 
     carregarEventos();
     carregarCampanhas();
-    carregarPix();
+    carregarChavePixAvulsa();
   </script>
 </body>
 </html>
