@@ -5,6 +5,7 @@ function montarSidebar(paginaAtiva) {
     { href: 'saidas.html', label: 'Saídas', icon: '⌇' },
     { href: 'conciliacao.html', label: 'Conciliação', icon: '⇄' },
     { href: 'eventos.html', label: 'Eventos & Campanhas', icon: '✦' },
+    { href: 'oracao.html', label: 'Pedidos de Oração', icon: '🕊' },
     { href: 'usuarios.html', label: 'Usuários', icon: '⚿' },
   ];
   const nav = links.map(l =>
