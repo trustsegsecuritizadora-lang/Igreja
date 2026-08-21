@@ -16,7 +16,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // era reconhecida dentro da MESMA chamada de rede que a validava, então
 // qualquer insert/update feito numa chamada separada (o padrão comum no app)
 // era barrado pela RLS por não saber quem era o usuário.
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+// IMPORTANTE: atribuição direta (sem "const"/"let"), não uma nova declaração.
+// A lib supabase-js (UMD, via CDN) já expõe seu namespace como uma variável
+// global de nível superior ("var supabase = ..."). Se este script também
+// DECLARASSE "const supabase = ...", o navegador lança
+// "SyntaxError: Identifier 'supabase' has already been declared" — um erro de
+// PARSE que impede a execução de todo o api.js (e, por consequência, trava a
+// tela de login e qualquer página que dependa dele). Atribuir a variável
+// global existente (sem const/let) substitui o namespace pelo cliente
+// autenticado sem colidir com a declaração da biblioteca.
+window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   global: { headers: { 'x-sgde-token': sessionStorage.getItem('sgde_token') || '' } },
 });
 
