@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nossa Casa, Nosso Propósito — Igreja Salvador do Sétimo Dia</title>
+<meta name="description" content="Campanha para aquisição da sede própria da Igreja Salvador do Sétimo Dia. Contribua via PIX e acompanhe o progresso em tempo real.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Nossa Casa, Nosso Propósito — ISSD">
+<meta property="og:description" content="Estamos unidos para adquirir a sala onde será nossa sede. Contribua via PIX e acompanhe o progresso.">
+<meta property="og:url" content="https://salvadordosetimodia.com.br/campanhas/nossa-casa-nosso-proposito.html">
+<meta property="og:image" content="https://salvadordosetimodia.com.br/img/pix-qrcode.png">
+<meta name="theme-color" content="#0A1220">
+<link rel="stylesheet" href="../css/site.css">
+<style>
+  .campanha-hero{padding:0 20px 64px}
+  .campanha-hero-inner{max-width:760px;margin:0 auto;padding-top:44px;text-align:center}
+  .campanha-hero h1{color:var(--parchment-50);font-size:clamp(1.9rem,4.4vw,2.8rem);margin:14px 0 16px;line-height:1.18}
+  .campanha-hero .sub{opacity:.8;font-size:1.05rem;line-height:1.6;max-width:560px;margin:0 auto}
+  .painel-progresso{background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);
+    padding:40px 44px;max-width:900px;margin:-52px auto 0;position:relative;z-index:2}
+  @media(max-width:640px){.painel-progresso{padding:30px 24px}}
+  .painel-numeros{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .painel-numeros .arrecadado{font-family:'IBM Plex Mono',monospace;font-size:1.9rem;font-weight:600;color:var(--navy-950)}
+  .painel-numeros .meta{color:var(--ink-500);font-size:.94rem}
+  .painel-numeros .pct{font-family:'IBM Plex Mono',monospace;color:var(--gold-500);font-weight:600;font-size:1.1rem}
+  .painel-cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+  .detalhes-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:56px;margin-top:8px}
+  @media(max-width:880px){.detalhes-grid{grid-template-columns:1fr;gap:36px}}
+  .detalhes-texto p{line-height:1.75;color:var(--ink-900);font-size:1.02rem}
+</style>
+</head>
+<body>
+
+<header class="hero textured campanha-hero">
+  <nav class="pubnav">
+    <a href="../index.html">Início</a>
+    <a href="../index.html#campanhas">Campanhas</a>
+    <a href="../eventos.html">Eventos</a>
+    <a class="area-interna" href="https://sistema.salvadordosetimodia.com.br/login.html">Área interna</a>
+  </nav>
+  <div class="campanha-hero-inner">
+    <p class="eyebrow on-dark center">Propósito em ação · Campanha institucional</p>
+    <h1>Nossa Casa, Nosso Propósito</h1>
+    <p class="sub">Nossa Igreja recém fundada já possui membros suficientes para que possamos, de forma unida, adquirir a sala onde será nossa sede. É hora de mostrarmos nossa união e dar esse primeiro passo.</p>
+  </div>
+</header>
+
+<div class="painel-progresso reveal">
+  <div class="painel-numeros">
+    <span class="arrecadado" id="valor-arrecadado">—</span>
+    <span class="meta">de <span id="valor-meta">—</span></span>
+    <span class="pct" id="valor-pct">—</span>
+  </div>
+  <div class="barra"><div id="barra-progresso" style="width:0%"></div></div>
+  <div class="painel-cta-row">
+    <a class="btn btn-primario" href="#pix">Quero contribuir</a>
+    <button type="button" class="btn btn-secundario on-light" id="btn-compartilhar">Compartilhar no WhatsApp</button>
+  </div>
+</div>
+
+<section class="wrap">
+  <div class="detalhes-grid">
+    <div class="detalhes-texto reveal">
+      <p class="eyebrow">Sobre a campanha</p>
+      <p>Nossa Igreja recém fundada já possui membros suficientes para que possamos de forma unida adquirir a sala onde será nossa sede. É hora de mostrarmos nossa união e dar esse primeiro passo.</p>
+      <p>Toda contribuição é aplicada exclusivamente na aquisição do espaço. Assim que houver um resultado a compartilhar, esta página será atualizada com a prestação de contas.</p>
+    </div>
+
+    <div class="qr-card reveal" id="pix">
+      <p class="qr-kicker">Doe via PIX para esta campanha</p>
+      <div class="qr-frame">
+        <img src="../img/pix-qrcode.png" alt="QR Code PIX para doação — Nossa Casa, Nosso Propósito" width="200" height="200">
+      </div>
+      <p class="aponte">Aponte o app do seu banco para o QR Code</p>
+      <div class="chave-pix-linha" id="chave-pix-wrap" style="display:none">
+        <code id="chave-pix"></code>
+        <button type="button" id="btn-copiar-pix">Copiar chave</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="rodape-premium">
+  <div class="rodape-base" style="margin-top:0;border-top:none;padding-top:0">
+    <span>© <span id="ano-atual"></span> Igreja Salvador do Sétimo Dia</span>
+    <a class="area-interna-discreta" href="https://sistema.salvadordosetimodia.com.br/login.html">Área Interna / SGDE</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../js/site.js"></script>
+<script>
+  document.getElementById('ano-atual').textContent = new Date().getFullYear();
+
+  (async function () {
+    const { data: c } = await supabase.from('campanhas')
+      .select('id_campanha, meta_valor').eq('slug', 'nossa-casa-nosso-proposito').maybeSingle();
+    if (!c) return;
+    const progresso = await carregarProgressoCampanhas();
+    const arrecadado = progresso[c.id_campanha] || 0;
+    const pct = c.meta_valor ? Math.min(100, Math.round((arrecadado / c.meta_valor) * 100)) : 0;
+    document.getElementById('valor-arrecadado').textContent = formatarMoeda(arrecadado);
+    document.getElementById('valor-meta').textContent = formatarMoeda(c.meta_valor);
+    document.getElementById('valor-pct').textContent = pct + '% da meta';
+    document.getElementById('barra-progresso').style.width = pct + '%';
+  })();
+
+  carregarChavePixAvulsa();
+
+  document.getElementById('btn-compartilhar').addEventListener('click', () => {
+    const texto = encodeURIComponent('Estou contribuindo com a campanha "Nossa Casa, Nosso Propósito" da Igreja Salvador do Sétimo Dia. Ajude você também: ' + location.href);
+    window.open('https://wa.me/?text=' + texto, '_blank', 'noopener');
+  });
+</script>
+</body>
+</html>
