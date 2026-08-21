@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transparência · Igreja Salvador do Sétimo Dia</title>
+<meta name="description" content="Prestação de contas das campanhas da ISSD: arrecadação, aplicação de recursos e resultados alcançados.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Transparência · ISSD">
+<meta property="og:description" content="Quem contribui merece saber o impacto que ajudou a construir.">
+<meta property="og:url" content="https://salvadordosetimodia.com.br/transparencia.html">
+<meta property="og:image" content="https://salvadordosetimodia.com.br/img/logo/issd-og-image.jpg">
+<meta name="theme-color" content="#0A1220">
+<link rel="icon" href="img/logo/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="img/logo/apple-touch-icon.png">
+<link rel="stylesheet" href="css/site.css">
+<style>
+  .transp-hero{padding:16px 20px 56px;text-align:center}
+  .transp-hero-inner{max-width:620px;margin:0 auto;padding-top:40px}
+  .transp-hero h1{color:var(--parchment-50);font-size:clamp(1.9rem,4vw,2.5rem);margin:0 0 14px}
+  .transp-hero p{color:var(--parchment-100);opacity:.82;font-size:1.05rem;line-height:1.7}
+
+  .transp-vazio{
+    max-width:560px;margin:0 auto;padding:64px 32px;text-align:center;
+    background:var(--parchment-100);border-radius:18px;border:1px solid var(--border);
+  }
+  .transp-vazio p{color:var(--ink-500);font-size:1.05rem;line-height:1.7;margin:0}
+
+  .transp-resultado{
+    max-width:920px;margin:0 auto 48px;background:#fff;border:1px solid var(--border);border-radius:18px;
+    overflow:hidden;box-shadow:var(--shadow);
+  }
+  .transp-resultado .cabecalho{background:linear-gradient(155deg,var(--navy-950),var(--navy-800));color:var(--parchment-100);padding:32px 36px}
+  .transp-resultado .cabecalho h3{color:var(--parchment-50);font-size:1.4rem;margin:0 0 6px}
+  .transp-resultado .cabecalho .quando{opacity:.7;font-size:.88rem}
+  .transp-corpo{padding:32px 36px}
+  .transp-numeros{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:24px;margin-bottom:24px}
+  .transp-numero .rotulo{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-500);margin:0 0 4px}
+  .transp-numero .val{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:1.4rem;color:var(--navy-950)}
+  .transp-resultados-texto{color:var(--ink-500);line-height:1.75;font-size:.98rem;border-top:1px solid var(--border);padding-top:20px;margin-top:8px}
+  .transp-docs{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+  .transp-docs a{
+    display:inline-flex;align-items:center;gap:8px;background:var(--parchment-100);border:1px solid var(--border);
+    border-radius:8px;padding:8px 14px;font-size:.86rem;color:var(--navy-800);text-decoration:none;font-weight:600;
+  }
+  .transp-docs a:hover{border-color:var(--gold-500);color:var(--gold-500)}
+</style>
+</head>
+<body>
+
+<header class="hero textured transp-hero">
+  <nav class="pubnav">
+    <a href="index.html" class="nav-logo" aria-label="ISSD — Início">
+      <img src="img/logo/issd-logo-symbol.png" alt="" width="30" height="30">
+    </a>
+    <a href="index.html">Início</a>
+    <a href="index.html#campanhas">Campanhas</a>
+    <a href="transparencia.html" class="active">Transparência</a>
+    <a href="eventos.html">Eventos</a>
+    <a class="area-interna" href="https://sistema.salvadordosetimodia.com.br/login.html">Área interna</a>
+  </nav>
+  <div class="transp-hero-inner">
+    <h1>Transparência que gera confiança.</h1>
+    <p>Quem contribui merece saber o impacto que ajudou a construir.</p>
+  </div>
+</header>
+
+<section class="wrap" style="padding-top:8px;padding-bottom:80px">
+  <div id="lista-transparencia">
+    <div class="transp-vazio"><p>Carregando…</p></div>
+  </div>
+</section>
+
+<footer class="rodape-premium" style="margin-top:0">
+  <div class="rodape-base" style="margin-top:0;border-top:none;padding-top:0">
+    <span>© <span id="ano-atual"></span> Igreja Salvador do Sétimo Dia</span>
+    <a class="area-interna-discreta" href="https://sistema.salvadordosetimodia.com.br/login.html">Área Interna / SGDE</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/site.js"></script>
+<script>
+  document.getElementById('ano-atual').textContent = new Date().getFullYear();
+
+  async function carregarTransparencia() {
+    const el = document.getElementById('lista-transparencia');
+    const { data: campanhas, error } = await supabase.from('campanhas')
+      .select('id_campanha, titulo, data_fim, meta_valor, total_arrecadado_confirmado, total_aplicado, saldo, destinacao_saldo, entregues_cestas, entregues_brinquedos, criancas_familias_beneficiadas, instituicao_beneficiada, resultados_texto')
+      .eq('publicado', true).eq('prestacao_contas_publicada', true)
+      .in('status', ['encerrada', 'prestacao_contas']).order('data_fim', { ascending: false });
+
+    if (error || !campanhas || campanhas.length === 0) {
+      el.innerHTML = '<div class="transp-vazio"><p>Nossas primeiras ações estão em andamento. Ao final de cada campanha, os resultados serão publicados aqui.</p></div>';
+      return;
+    }
+
+    const { data: docs } = await supabase.from('campanha_documentos')
+      .select('campanha_id, nome, url').eq('publico', true);
+    const docsPorCampanha = {};
+    (docs || []).forEach(d => { (docsPorCampanha[d.campanha_id] ||= []).push(d); });
+
+    el.innerHTML = campanhas.map(c => {
+      const numeros = [];
+      if (c.total_arrecadado_confirmado != null) numeros.push(['Arrecadado', formatarMoeda(c.total_arrecadado_confirmado)]);
+      if (c.total_aplicado != null) numeros.push(['Aplicado', formatarMoeda(c.total_aplicado)]);
+      if (c.saldo != null) numeros.push(['Saldo', formatarMoeda(c.saldo)]);
+      if (c.entregues_cestas != null) numeros.push(['Cestas entregues', c.entregues_cestas]);
+      if (c.entregues_brinquedos != null) numeros.push(['Brinquedos entregues', c.entregues_brinquedos]);
+      if (c.criancas_familias_beneficiadas != null) numeros.push(['Famílias/crianças beneficiadas', c.criancas_familias_beneficiadas]);
+
+      const docsCampanha = docsPorCampanha[c.id_campanha] || [];
+
+      return `
+      <article class="transp-resultado reveal">
+        <div class="cabecalho">
+          <h3>${c.titulo}</h3>
+          <div class="quando">${c.data_fim ? 'Encerrada em ' + formatarDataLonga(c.data_fim) : 'Resultado final'}${c.instituicao_beneficiada ? ' · Instituição: ' + c.instituicao_beneficiada : ''}</div>
+        </div>
+        <div class="transp-corpo">
+          ${numeros.length ? `
+            <div class="transp-numeros">
+              ${numeros.map(([rotulo, val]) => `<div class="transp-numero"><p class="rotulo">${rotulo}</p><p class="val">${val}</p></div>`).join('')}
+            </div>` : ''}
+          ${c.destinacao_saldo ? `<p style="color:var(--ink-500);font-size:.92rem;margin:0 0 16px"><strong>Destinação do saldo:</strong> ${c.destinacao_saldo}</p>` : ''}
+          ${c.resultados_texto ? `<div class="transp-resultados-texto">${c.resultados_texto}</div>` : ''}
+          ${docsCampanha.length ? `
+            <div class="transp-docs">
+              ${docsCampanha.map(d => `<a href="${d.url}" target="_blank" rel="noopener">${d.nome}</a>`).join('')}
+            </div>` : ''}
+        </div>
+      </article>`;
+    }).join('');
+    ativarRevelacaoScroll();
+  }
+  carregarTransparencia();
+</script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="titulo-aba">7 Minutos de Propósito · Igreja Salvador do Sétimo Dia</title>
+<meta id="meta-desc" name="description" content="7 Minutos de Propósito — Igreja Salvador do Sétimo Dia.">
+<meta id="og-type" property="og:type" content="article">
+<meta id="og-title" property="og:title" content="7 Minutos de Propósito · ISSD">
+<meta id="og-desc" property="og:description" content="Reflexões curtas sobre fé, propósito e ação.">
+<meta id="og-url" property="og:url" content="https://salvadordosetimodia.com.br/proposito-artigo.html">
+<meta property="og:image" content="https://salvadordosetimodia.com.br/img/logo/issd-og-image.jpg">
+<meta name="theme-color" content="#0A1220">
+<link rel="icon" href="img/logo/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="img/logo/apple-touch-icon.png">
+<link rel="stylesheet" href="css/site.css">
+<style>
+  .art-hero{padding:16px 20px 48px;text-align:center}
+  .art-hero-inner{max-width:680px;margin:0 auto;padding-top:36px}
+  .art-hero .categoria{color:var(--gold-300);font-size:.76rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin:0 0 14px}
+  .art-hero h1{color:var(--parchment-50);font-size:clamp(1.7rem,3.6vw,2.3rem);margin:0 0 14px;line-height:1.25}
+  .art-hero .meta{color:var(--parchment-100);opacity:.7;font-size:.9rem}
+  .art-corpo{max-width:680px;margin:0 auto;padding:56px 24px 24px}
+  .art-corpo p{color:var(--ink-900);font-size:1.08rem;line-height:1.85;margin:0 0 24px;font-family:'EB Garamond',Georgia,serif}
+  .art-fechamento{text-align:center;padding:16px 24px 88px}
+  .art-fechamento p{
+    font-family:'EB Garamond',serif;font-weight:600;font-style:italic;font-size:1.15rem;color:var(--gold-500);
+  }
+  .art-voltar{max-width:680px;margin:0 auto;padding:0 24px}
+</style>
+</head>
+<body>
+
+<header class="hero textured art-hero">
+  <nav class="pubnav">
+    <a href="index.html" class="nav-logo" aria-label="ISSD — Início">
+      <img src="img/logo/issd-logo-symbol.png" alt="" width="30" height="30">
+    </a>
+    <a href="index.html">Início</a>
+    <a href="proposito.html">7 Minutos de Propósito</a>
+    <a href="eventos.html">Eventos</a>
+    <a class="area-interna" href="https://sistema.salvadordosetimodia.com.br/login.html">Área interna</a>
+  </nav>
+  <div class="art-hero-inner" id="cabecalho-artigo">
+    <p class="categoria">Carregando…</p>
+  </div>
+</header>
+
+<div class="art-voltar"><a class="btn-texto" href="proposito.html">← Todos os artigos</a></div>
+<article class="art-corpo" id="corpo-artigo"></article>
+<div class="art-fechamento">
+  <p>Fé que inspira. Pessoas que se unem. Ação que transforma.</p>
+</div>
+
+<footer class="rodape-premium" style="margin-top:0">
+  <div class="rodape-base" style="margin-top:0;border-top:none;padding-top:0">
+    <span>© <span id="ano-atual"></span> Igreja Salvador do Sétimo Dia</span>
+    <a class="area-interna-discreta" href="https://sistema.salvadordosetimodia.com.br/login.html">Área Interna / SGDE</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/site.js"></script>
+<script>
+  document.getElementById('ano-atual').textContent = new Date().getFullYear();
+
+  async function carregarArtigo() {
+    const slug = new URLSearchParams(window.location.search).get('slug');
+    const cab = document.getElementById('cabecalho-artigo');
+    const corpo = document.getElementById('corpo-artigo');
+    if (!slug) {
+      cab.innerHTML = '<h1>Artigo não encontrado</h1>';
+      corpo.innerHTML = '<p>O conteúdo que você procura não está disponível. <a href="proposito.html">Voltar para 7 Minutos de Propósito</a>.</p>';
+      return;
+    }
+    const { data: a, error } = await supabase.from('conteudos_proposito')
+      .select('titulo, subtitulo, autor, categoria, tempo_leitura_min, conteudo, seo_title, meta_description, data_publicacao')
+      .eq('slug', slug).eq('status', 'publicado').maybeSingle();
+
+    if (error || !a) {
+      cab.innerHTML = '<h1>Artigo não encontrado</h1>';
+      corpo.innerHTML = '<p>Este conteúdo não está disponível no momento. <a href="proposito.html">Voltar para 7 Minutos de Propósito</a>.</p>';
+      return;
+    }
+    document.getElementById('titulo-aba').textContent = (a.seo_title || a.titulo) + ' · ISSD';
+    document.getElementById('meta-desc').setAttribute('content', a.meta_description || a.subtitulo || '');
+    document.getElementById('og-title').setAttribute('content', a.titulo);
+    document.getElementById('og-desc').setAttribute('content', a.meta_description || a.subtitulo || '');
+    document.getElementById('og-url').setAttribute('content', 'https://salvadordosetimodia.com.br/proposito-artigo.html?slug=' + encodeURIComponent(slug));
+
+    cab.innerHTML = `
+      <p class="categoria">${a.categoria || 'Propósito'}</p>
+      <h1>${a.titulo}</h1>
+      <p class="meta">${a.autor ? a.autor + ' · ' : ''}${a.tempo_leitura_min ? a.tempo_leitura_min + ' min de leitura' : ''}</p>
+    `;
+    corpo.innerHTML = a.conteudo;
+  }
+  carregarArtigo();
+</script>
+</body>
+</html>

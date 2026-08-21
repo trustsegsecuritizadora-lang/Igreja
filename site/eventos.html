@@ -95,7 +95,7 @@
 
       const el = document.getElementById('lista-eventos');
       if (error || !data || data.length === 0) {
-        el.innerHTML = '<p style="color:var(--ink-500)">Nenhum evento programado no momento.</p>';
+        el.innerHTML = '<p style="color:var(--ink-500)">Nossa próxima agenda está sendo preparada. Acompanhe as novidades da ISSD por aqui.</p>';
         return;
       }
       el.innerHTML = data.map(ev => `
@@ -134,7 +134,7 @@
 
     async function carregarCampanhas() {
       const { data: campanhas, error } = await supabase.from('campanhas')
-        .select('id_campanha, titulo, descricao, meta_valor, data_fim, slug, categoria')
+        .select('id_campanha, titulo, descricao, meta_valor, data_fim, slug, categoria, total_arrecadado_confirmado')
         .eq('publicado', true).order('criado_em');
 
       const el = document.getElementById('lista-campanhas');
@@ -143,29 +143,26 @@
         return;
       }
 
-      const progresso = await carregarProgressoCampanhas();
       const paginaPorSlug = { 'nossa-casa-nosso-proposito': 'campanhas/nossa-casa-nosso-proposito.html',
                                'um-dia-para-sorrir': 'campanhas/um-dia-para-sorrir.html' };
 
       el.innerHTML = campanhas.map(c => {
-        const arrecadado = progresso[c.id_campanha] || 0;
+        const arrecadado = Number(c.total_arrecadado_confirmado) || 0;
         const pct = c.meta_valor ? Math.min(100, Math.round((arrecadado / c.meta_valor) * 100)) : 0;
         const link = (c.slug && paginaPorSlug[c.slug]) || '#';
         const tag = c.categoria === 'dia_das_criancas' ? 'Dia das Crianças 2026' : 'Campanha institucional';
         return `
-        <a class="campanha-card" href="${link}">
-          <div class="capa"><span class="tag">${tag}</span></div>
-          <div class="miolo">
-            <h3>${c.titulo}</h3>
-            <p class="desc">${(c.descricao || '').slice(0, 150)}${(c.descricao || '').length > 150 ? '…' : ''}</p>
-            ${c.meta_valor ? `
-              <div class="barra"><div style="width:${pct}%"></div></div>
-              <div class="progresso-linha"><span class="valor">${formatarMoeda(arrecadado)}</span><span class="pct">${pct}% da meta</span></div>
-            ` : ''}
-            <div class="rodape">
-              <span class="saiba-mais">Conhecer a campanha →</span>
-              ${c.data_fim ? `<span class="contador-mini">${diasRestantes(c.data_fim)} dias restantes</span>` : ''}
-            </div>
+        <a class="campanha-card-simples" href="${link}">
+          <span class="tag">${tag}</span>
+          <h3>${c.titulo}</h3>
+          <p class="desc">${(c.descricao || '').slice(0, 150)}${(c.descricao || '').length > 150 ? '…' : ''}</p>
+          ${c.meta_valor ? `
+            <div class="barra"><div style="width:${pct}%"></div></div>
+            <div class="progresso-linha"><span class="valor">${formatarMoeda(arrecadado)}</span><span class="pct">${pct}% da meta</span></div>
+          ` : ''}
+          <div class="rodape">
+            <span class="saiba-mais">Conhecer a campanha →</span>
+            ${c.data_fim ? `<span class="contador-mini">${diasRestantes(c.data_fim)} dias restantes</span>` : ''}
           </div>
         </a>`;
       }).join('');

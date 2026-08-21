@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7 Minutos de Propósito · Igreja Salvador do Sétimo Dia</title>
+<meta name="description" content="Reflexões curtas sobre fé, propósito e ação para o seu dia — 7 Minutos de Propósito, da ISSD.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="7 Minutos de Propósito · ISSD">
+<meta property="og:description" content="Reflexões curtas sobre fé, propósito e ação para o seu dia.">
+<meta property="og:url" content="https://salvadordosetimodia.com.br/proposito.html">
+<meta property="og:image" content="https://salvadordosetimodia.com.br/img/logo/issd-og-image.jpg">
+<meta name="theme-color" content="#0A1220">
+<link rel="icon" href="img/logo/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="img/logo/apple-touch-icon.png">
+<link rel="stylesheet" href="css/site.css">
+<style>
+  .prop-hero{padding:16px 20px 56px;text-align:center}
+  .prop-hero-inner{max-width:600px;margin:0 auto;padding-top:40px}
+  .prop-hero h1{color:var(--parchment-50);font-size:clamp(1.9rem,4vw,2.5rem);margin:0 0 14px}
+  .prop-hero p{color:var(--parchment-100);opacity:.82;font-size:1.05rem;line-height:1.7}
+  .prop-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:28px}
+  .prop-card{
+    background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;
+    text-decoration:none;color:inherit;box-shadow:var(--shadow);display:flex;flex-direction:column;
+    transition:transform .2s ease-out,box-shadow .2s ease-out;
+  }
+  .prop-card:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(15,27,45,.14)}
+  .prop-card .capa{aspect-ratio:16/10;background:linear-gradient(140deg,var(--navy-950),var(--navy-700));background-size:cover;background-position:center}
+  .prop-card .miolo{padding:22px 24px;display:flex;flex-direction:column;gap:8px;flex:1}
+  .prop-card .categoria{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-500);font-weight:700}
+  .prop-card h3{font-size:1.1rem;color:var(--navy-950);line-height:1.3}
+  .prop-card .tempo{color:var(--ink-500);font-size:.82rem;margin-top:auto;padding-top:8px}
+  .prop-vazio{max-width:520px;margin:0 auto;padding:56px 32px;text-align:center;background:var(--parchment-100);border-radius:18px;border:1px solid var(--border)}
+  .prop-vazio p{color:var(--ink-500);font-size:1.02rem;line-height:1.7;margin:0}
+</style>
+</head>
+<body>
+
+<header class="hero textured prop-hero">
+  <nav class="pubnav">
+    <a href="index.html" class="nav-logo" aria-label="ISSD — Início">
+      <img src="img/logo/issd-logo-symbol.png" alt="" width="30" height="30">
+    </a>
+    <a href="index.html">Início</a>
+    <a href="index.html#campanhas">Campanhas</a>
+    <a href="proposito.html" class="active">7 Minutos de Propósito</a>
+    <a href="eventos.html">Eventos</a>
+    <a class="area-interna" href="https://sistema.salvadordosetimodia.com.br/login.html">Área interna</a>
+  </nav>
+  <div class="prop-hero-inner">
+    <h1>7 Minutos de Propósito</h1>
+    <p>Reflexões curtas, para ler em poucos minutos, sobre fé, propósito e ação no dia a dia.</p>
+  </div>
+</header>
+
+<section class="wrap" style="padding-top:8px;padding-bottom:80px">
+  <div id="lista-artigos" class="prop-lista">
+    <div class="skeleton" style="height:280px;border-radius:16px"></div>
+  </div>
+</section>
+
+<footer class="rodape-premium" style="margin-top:0">
+  <div class="rodape-base" style="margin-top:0;border-top:none;padding-top:0">
+    <span>© <span id="ano-atual"></span> Igreja Salvador do Sétimo Dia</span>
+    <a class="area-interna-discreta" href="https://sistema.salvadordosetimodia.com.br/login.html">Área Interna / SGDE</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/site.js"></script>
+<script>
+  document.getElementById('ano-atual').textContent = new Date().getFullYear();
+
+  async function carregarArtigos() {
+    const el = document.getElementById('lista-artigos');
+    const { data, error } = await supabase.from('conteudos_proposito')
+      .select('titulo, subtitulo, slug, imagem_url, categoria, tempo_leitura_min, data_publicacao')
+      .eq('status', 'publicado').order('data_publicacao', { ascending: false });
+
+    if (error || !data || data.length === 0) {
+      el.style.display = 'block';
+      el.innerHTML = '<div class="prop-vazio"><p>Novos conteúdos de 7 Minutos de Propósito estão a caminho. Volte em breve.</p></div>';
+      return;
+    }
+    el.innerHTML = data.map(a => `
+      <a class="prop-card" href="proposito-artigo.html?slug=${encodeURIComponent(a.slug)}">
+        <div class="capa" style="${a.imagem_url ? `background-image:url('${a.imagem_url}')` : ''}"></div>
+        <div class="miolo">
+          <p class="categoria">${a.categoria || 'Propósito'}</p>
+          <h3>${a.titulo}</h3>
+          <p class="tempo">${a.tempo_leitura_min ? a.tempo_leitura_min + ' min de leitura' : ''}</p>
+        </div>
+      </a>`).join('');
+  }
+  carregarArtigos();
+</script>
+</body>
+</html>
