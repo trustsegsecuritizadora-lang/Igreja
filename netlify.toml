@@ -1,17 +1,14 @@
-# Configuração para o site institucional PÚBLICO (pasta site/).
-# A área interna (pasta app/) deve ser um site Netlify SEPARADO — mesmo
-# sendo tudo estático, manter os dois em domínios/deploys distintos evita
-# que o robô de busca indexe a tela de login do sistema financeiro junto
-# com as páginas de eventos, e facilita restringir o subdomínio interno
-# depois (ex: com Netlify Identity ou proteção por senha do próprio plano).
+# Este repositorio alimenta DOIS sites Netlify separados (ver README_DEPLOY.md):
+#   - igreja-sgde-sistema        -> publica a pasta app/  (area interna, login)
+#   - igreja-salvador-setimo-dia -> publica a pasta site/ (site publico)
 #
-# Ver README_DEPLOY.md para o passo a passo completo dos dois sites.
-
-[build]
-  publish = "site"
-  command = ""
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 404
+# Cada site define sua propria "Publish directory" direto na interface da
+# Netlify (Site settings > Build & deploy). Por isso este arquivo NAO define
+# [build].publish nem redirects globais aqui - isso forcaria a mesma pasta
+# para os dois sites e quebraria um deles (foi o que aconteceu antes: o
+# site interno estava servindo o conteudo do site publico por causa de um
+# redirect generico "/* -> /index.html" definido aqui).
+#
+# Os redirects especificos de cada pasta ficam em arquivos _redirects
+# dentro da propria pasta (site/_redirects), que so valem para o deploy
+# daquele site.
