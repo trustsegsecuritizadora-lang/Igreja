@@ -8,7 +8,8 @@
 const SUPABASE_URL = 'https://fragxrqofweahrhgozhq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZyYWd4cnFvZndlYWhyaGdvemhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzcyNzUsImV4cCI6MjEwMjgxMzI3NX0.A1mEQtBloGuuJJt9QhL7002RHCgBKOV5dIPdCsTvVyo';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 
 const SGDE = (() => {
   function getToken() { return sessionStorage.getItem('sgde_token'); }
