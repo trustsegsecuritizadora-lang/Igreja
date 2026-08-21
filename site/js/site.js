@@ -44,15 +44,6 @@ async function carregarChavePixAvulsa(elChaveId = 'chave-pix', elWrapId = 'chave
   }
 }
 
-// Progresso real (arrecadado) de todas as campanhas publicadas, via RPC que já
-// existe no banco (campanha_progresso_publica) — nunca estimado no front.
-async function carregarProgressoCampanhas() {
-  const { data } = await supabase.rpc('campanha_progresso_publica');
-  const porId = {};
-  (data || []).forEach(p => { porId[p.id_campanha] = Number(p.valor_arrecadado) || 0; });
-  return porId;
-}
-
 // Próximo culto — vem de configuracoes_publicas (proximo_culto_dia / proximo_culto_horario),
 // administrável sem hardcode.
 async function carregarProximoCulto() {
