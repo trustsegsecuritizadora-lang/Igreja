@@ -7,13 +7,44 @@
 <meta name="description" content="Próximos eventos e campanhas da igreja.">
 <link rel="stylesheet" href="../app/css/style.css">
 <style>
-  .pubnav{max-width:960px;margin:0 auto;padding:18px 20px 0;display:flex;gap:22px}
-  .pubnav a{color:var(--parchment-100);opacity:.75;text-decoration:none;font-size:.9rem;letter-spacing:.02em}
-  .pubnav a:hover,.pubnav a.active{opacity:1;color:var(--gold-300)}
-  .hero{background:linear-gradient(180deg,var(--navy-950),var(--navy-800));color:var(--parchment-100);padding:16px 20px 60px;text-align:center}
-  .hero h1{color:var(--gold-300);font-size:2.1rem;margin:24px 0 8px}
-  .hero p{opacity:.75;max-width:520px;margin:0 auto}
-  .wrap{max-width:960px;margin:0 auto;padding:40px 20px}
+  :root{
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  *{box-sizing:border-box}
+
+  .textured{position:relative;isolation:isolate}
+  .textured::before{
+    content:"";position:absolute;inset:0;background-image:var(--grain);
+    opacity:.05;mix-blend-mode:overlay;pointer-events:none;z-index:0;
+  }
+  .textured > *{position:relative;z-index:1}
+
+  .pubnav{
+    max-width:1040px;margin:0 auto;padding:20px 24px 0;
+    display:flex;align-items:center;gap:26px;
+  }
+  .pubnav a{
+    color:var(--parchment-100);opacity:.7;text-decoration:none;
+    font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600;
+    padding-bottom:4px;border-bottom:1px solid transparent;
+  }
+  .pubnav a:hover,.pubnav a.active{opacity:1;color:var(--gold-300);border-color:rgba(216,188,138,.5)}
+  .pubnav .area-interna{
+    margin-left:auto;opacity:1;border:1px solid rgba(216,188,138,.4);
+    padding:8px 18px;border-radius:999px;font-size:.76rem;letter-spacing:.06em;
+  }
+  .pubnav .area-interna:hover{border-color:var(--gold-300);background:rgba(184,147,90,.14)}
+
+  .hero{
+    background:
+      radial-gradient(ellipse 900px 420px at 50% -10%, rgba(216,188,138,.14), transparent 60%),
+      linear-gradient(175deg,var(--navy-950),var(--navy-800) 65%,var(--navy-700));
+    color:var(--parchment-100);padding:16px 20px 56px;text-align:center;overflow:hidden;
+  }
+  .hero h1{color:var(--parchment-50);font-size:2.1rem;margin:26px 0 8px}
+  .hero p{opacity:.78;max-width:520px;margin:0 auto}
+
+  .wrap{max-width:1040px;margin:0 auto;padding:40px 20px}
   .evento-card,.campanha-card{display:grid;grid-template-columns:220px 1fr;gap:22px;margin-bottom:22px}
   .evento-card img,.campanha-card img{width:220px;height:140px;object-fit:cover;border-radius:var(--radius);background:var(--parchment-100)}
   @media(max-width:640px){.evento-card,.campanha-card{grid-template-columns:1fr}.evento-card img,.campanha-card img{width:100%}}
@@ -22,13 +53,66 @@
   footer{text-align:center;padding:30px;color:var(--ink-500);font-size:.8rem}
   .form-inscricao{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
   .form-inscricao input{flex:1;min-width:160px}
+
+  /* ---------- doação via PIX (mesmo cartão premium da home) ---------- */
+  .secao-pix{border-radius:18px;overflow:hidden;margin-top:56px}
+  .secao-pix .miolo{
+    background:linear-gradient(155deg,var(--navy-950),var(--navy-800) 55%,var(--navy-700));
+    padding:54px 20px;text-align:center;
+  }
+  .secao-pix .eyebrow{
+    font-family:'EB Garamond',serif;font-weight:600;letter-spacing:.24em;text-transform:uppercase;
+    font-size:.78rem;color:var(--gold-300);margin:0 0 8px;
+  }
+  .secao-pix h2{color:var(--parchment-50);margin:0 0 10px}
+  .secao-pix .desc{color:var(--parchment-100);opacity:.78;max-width:440px;margin:0 auto 26px;line-height:1.6}
+
+  .qr-card{
+    background:linear-gradient(165deg,#152238,var(--navy-950));
+    border:1px solid rgba(216,188,138,.22);
+    border-radius:18px;padding:30px 28px 26px;
+    box-shadow:0 20px 50px rgba(0,0,0,.35);
+    text-align:center;max-width:340px;margin:0 auto;
+    position:relative;isolation:isolate;
+  }
+  .qr-card::before{
+    content:"";position:absolute;inset:0;border-radius:18px;background-image:var(--grain);
+    opacity:.06;mix-blend-mode:overlay;pointer-events:none;
+  }
+  .qr-card .qr-kicker{
+    font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-300);
+    margin:0 0 14px;font-weight:600;position:relative;
+  }
+  .qr-frame{
+    background:var(--parchment-50);border-radius:12px;padding:14px;
+    display:inline-block;position:relative;
+  }
+  .qr-frame img{display:block;width:200px;height:200px;border-radius:4px}
+  .qr-card .aponte{
+    margin:16px 0 0;font-size:.86rem;color:var(--parchment-100);opacity:.85;position:relative;
+  }
+  .chave-pix-linha{
+    margin-top:18px;padding-top:16px;border-top:1px solid rgba(216,188,138,.2);
+    display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;position:relative;
+  }
+  .chave-pix-linha code{
+    background:rgba(216,188,138,.1);border:1px solid rgba(216,188,138,.25);
+    color:var(--gold-300);padding:6px 10px;border-radius:7px;font-size:.78rem;
+    max-width:100%;overflow-wrap:anywhere;
+  }
+  .chave-pix-linha button{
+    background:transparent;border:1px solid rgba(216,188,138,.4);color:var(--parchment-100);
+    padding:6px 12px;border-radius:999px;font-size:.76rem;cursor:pointer;width:auto;
+  }
+  .chave-pix-linha button:hover{border-color:var(--gold-300);color:var(--gold-300)}
 </style>
 </head>
 <body>
-  <div class="hero">
+  <div class="hero textured">
     <nav class="pubnav">
       <a href="index.html">Início</a>
       <a href="eventos.html" class="active">Eventos & Campanhas</a>
+      <a class="area-interna" href="https://sistema.salvadordosetimodia.com.br/login.html">Área interna</a>
     </nav>
     <h1>Eventos & Campanhas</h1>
     <p>Acompanhe o que está acontecendo e participe.</p>
@@ -46,16 +130,26 @@
       <div class="divisor"></div>
       <div id="lista-campanhas">Carregando…</div>
     </section>
-
-    <section id="secao-pix" class="card" style="margin-top:40px; display:none">
-      <h2 class="liturgica" style="margin:0 0 6px">Doação avulsa via PIX</h2>
-      <p class="sub" style="margin-bottom:12px">Quer contribuir fora de uma campanha específica? Use a chave abaixo.</p>
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <code id="chave-pix" style="background:var(--parchment-100);padding:8px 12px;border-radius:8px;font-size:.9rem"></code>
-        <button class="btn ghost" id="btn-copiar-pix">Copiar chave</button>
-      </div>
-    </section>
   </div>
+
+  <section class="secao-pix textured">
+    <div class="miolo">
+      <p class="eyebrow">Doação avulsa</p>
+      <h2 class="liturgica">Contribua via PIX</h2>
+      <p class="desc">Quer contribuir fora de uma campanha específica? Aponte a câmera do seu banco para o QR Code ou use a chave abaixo.</p>
+      <div class="qr-card">
+        <p class="qr-kicker">Doe via PIX</p>
+        <div class="qr-frame">
+          <img src="img/pix-qrcode.png" alt="QR Code PIX para doação — Igreja Salvador do Sétimo Dia" width="200" height="200">
+        </div>
+        <p class="aponte">Aponte o app do seu banco para o QR Code</p>
+        <div class="chave-pix-linha" id="chave-pix-wrap" style="display:none">
+          <code id="chave-pix"></code>
+          <button type="button" id="btn-copiar-pix">Copiar chave</button>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <footer>SGDE — Sistema de Gestão Digital Eclesiástico</footer>
 
@@ -156,11 +250,12 @@
       const { data } = await supabase.from('configuracoes_publicas').select('valor').eq('chave', 'pix_doacao_avulsa').maybeSingle();
       if (data && data.valor) {
         document.getElementById('chave-pix').textContent = data.valor;
-        document.getElementById('secao-pix').style.display = 'block';
+        document.getElementById('chave-pix-wrap').style.display = 'flex';
         document.getElementById('btn-copiar-pix').addEventListener('click', () => {
           navigator.clipboard.writeText(data.valor);
-          document.getElementById('btn-copiar-pix').textContent = 'Copiado!';
-          setTimeout(() => { document.getElementById('btn-copiar-pix').textContent = 'Copiar chave'; }, 2000);
+          const btn = document.getElementById('btn-copiar-pix');
+          btn.textContent = 'Copiado!';
+          setTimeout(() => { btn.textContent = 'Copiar chave'; }, 2000);
         });
       }
     }
