@@ -9,15 +9,35 @@
 <meta property="og:title" content="Igreja Salvador do Sétimo Dia">
 <meta property="og:description" content="Fé que transforma. Amor que acolhe. Propósito que serve.">
 <meta property="og:url" content="https://salvadordosetimodia.com.br/">
-<meta property="og:image" content="https://salvadordosetimodia.com.br/img/pix-qrcode.png">
+<meta property="og:image" content="https://salvadordosetimodia.com.br/img/logo/issd-og-image.jpg">
 <meta name="theme-color" content="#0A1220">
+<link rel="icon" href="img/logo/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="img/logo/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="img/logo/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="img/logo/apple-touch-icon.png">
 <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
 
 <!-- ===================== 01 · HERO ===================== -->
 <header class="hero textured">
+  <div class="hero-photo hero-photo-left" aria-hidden="true">
+    <picture>
+      <source type="image/webp" srcset="img/hero/hero-children-left.webp">
+      <img src="img/hero/hero-children-left.jpg" alt="" loading="eager" fetchpriority="high">
+    </picture>
+  </div>
+  <div class="hero-photo hero-photo-right" aria-hidden="true">
+    <picture>
+      <source type="image/webp" srcset="img/hero/hero-elderly-right.webp">
+      <img src="img/hero/hero-elderly-right.jpg" alt="" loading="eager" fetchpriority="high">
+    </picture>
+  </div>
+
   <nav class="pubnav">
+    <a href="index.html" class="nav-logo" aria-label="ISSD — Início">
+      <img src="img/logo/issd-logo-symbol.png" alt="" width="30" height="30">
+    </a>
     <a href="index.html" class="active">Início</a>
     <a href="index.html#quem-somos">Quem Somos</a>
     <a href="index.html#campanhas">Campanhas</a>
@@ -26,38 +46,13 @@
   </nav>
 
   <div class="hero-inner">
-    <div class="emblema center" aria-hidden="true">
-      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id="anelOuro" cx="35%" cy="30%" r="75%">
-            <stop offset="0%" stop-color="#F1DFB8"/><stop offset="55%" stop-color="#D8BC8A"/><stop offset="100%" stop-color="#B8935A"/>
-          </radialGradient>
-          <linearGradient id="cruzOuro" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#F1DFB8"/><stop offset="100%" stop-color="#B8935A"/>
-          </linearGradient>
-          <radialGradient id="fundoMedalha" cx="50%" cy="42%" r="65%">
-            <stop offset="0%" stop-color="#28405C"/><stop offset="100%" stop-color="#0A1220"/>
-          </radialGradient>
-        </defs>
-        <circle cx="60" cy="60" r="58" fill="none" stroke="url(#anelOuro)" stroke-width="1.4" opacity=".55"/>
-        <circle cx="60" cy="60" r="52" fill="url(#fundoMedalha)" stroke="url(#anelOuro)" stroke-width="2"/>
-        <g opacity=".9">
-          <circle cx="60" cy="17" r="1.6" fill="#D8BC8A"/><circle cx="60" cy="103" r="1.6" fill="#D8BC8A"/>
-          <circle cx="17" cy="60" r="1.6" fill="#D8BC8A"/><circle cx="103" cy="60" r="1.6" fill="#D8BC8A"/>
-        </g>
-        <g transform="translate(60,58)">
-          <rect x="-6" y="-32" width="12" height="62" rx="3.5" fill="url(#cruzOuro)"/>
-          <rect x="-21" y="-16" width="42" height="12" rx="3.5" fill="url(#cruzOuro)"/>
-        </g>
-      </svg>
-    </div>
-    <p class="sigla center">I S S D</p>
+    <img class="hero-logo" src="img/logo/issd-logo-lockup.png" alt="ISSD — Igreja Salvador do Sétimo Dia" width="440" height="444">
     <h1>Fé que transforma.<br>Amor que acolhe.<br>Propósito que serve.</h1>
     <p class="sub center">Uma comunidade unida pela fé e pelo propósito de transformar boas intenções em ações que fazem diferença na vida das pessoas.</p>
     <div class="cta-row">
       <a class="btn btn-primario" href="#quem-somos">Conheça a ISSD</a>
       <a class="btn btn-secundario" href="#campanhas">Nossas campanhas</a>
-      <a class="btn btn-secundario" href="#oracao-em-breve" id="link-pedido-oracao">Pedido de oração</a>
+      <a class="btn btn-secundario" href="#form-oracao" id="link-pedido-oracao">Pedido de oração</a>
     </div>
   </div>
 </header>
@@ -192,6 +187,41 @@
   <p class="center" style="margin-top:8px"><a class="btn-texto" href="eventos.html">Ver todos os eventos e campanhas →</a></p>
 </section>
 
+<!-- ===================== 08 · PEDIDO DE ORAÇÃO ===================== -->
+<section class="wrap-narrow oracao-secao" id="pedido-oracao">
+  <p class="eyebrow center">Estamos com você</p>
+  <h2 class="section-title center">Podemos orar por você?</h2>
+  <p class="section-lead center" style="margin-left:auto;margin-right:auto">Compartilhe seu pedido com a equipe da ISSD. Você pode se identificar ou preferir o anonimato — o importante é que ninguém precisa enfrentar sozinho o que está vivendo.</p>
+
+  <form class="oracao-card" id="form-oracao" novalidate>
+    <div class="oracao-grid">
+      <div>
+        <label for="campo-oracao-nome">Nome <span class="opcional">(opcional)</span></label>
+        <input type="text" id="campo-oracao-nome" name="nome" autocomplete="name">
+      </div>
+      <div>
+        <label for="campo-oracao-telefone">Telefone <span class="opcional">(opcional)</span></label>
+        <input type="tel" id="campo-oracao-telefone" name="telefone" autocomplete="tel">
+      </div>
+      <div class="span2">
+        <label for="campo-oracao-email">E-mail <span class="opcional">(opcional)</span></label>
+        <input type="email" id="campo-oracao-email" name="email" autocomplete="email">
+      </div>
+      <div class="span2">
+        <label for="campo-pedido-oracao">Pedido de oração</label>
+        <textarea id="campo-pedido-oracao" name="pedido" rows="4" required maxlength="4000" placeholder="Escreva aqui o que está em seu coração…"></textarea>
+      </div>
+    </div>
+    <label class="oracao-checkbox">
+      <input type="checkbox" id="campo-oracao-anonimo" name="anonimo">
+      Prefiro permanecer anônimo.
+    </label>
+    <button type="submit" class="btn btn-primario" id="btn-enviar-oracao">Enviar pedido de oração</button>
+    <p class="oracao-aviso">Seu pedido será tratado de forma reservada pela equipe responsável da ISSD.</p>
+    <p class="oracao-mensagem" id="oracao-mensagem" role="status" aria-live="polite"></p>
+  </form>
+</section>
+
 <!-- ===================== 09 · GENEROSIDADE ===================== -->
 <section class="generosidade textured" id="generosidade">
   <div class="generosidade-grid wrap">
@@ -202,17 +232,18 @@
       <div class="destino-select">
         <p class="rotulo">Onde quero contribuir</p>
         <div class="destino-opcoes">
-          <button type="button" class="destino-opcao ativo" data-destino="Igreja / Oferta">Igreja / Oferta</button>
-          <button type="button" class="destino-opcao" data-destino="Aquisição da Sede">Aquisição da Sede</button>
-          <button type="button" class="destino-opcao" data-destino="Um Dia para Sorrir">Um Dia para Sorrir</button>
+          <button type="button" class="destino-opcao ativo" data-destino-slug="igreja-oferta" data-destino="Igreja / Oferta">Igreja / Oferta</button>
+          <button type="button" class="destino-opcao" data-destino-slug="nossa-casa-nosso-proposito" data-destino="Aquisição da Sede">Aquisição da Sede</button>
+          <button type="button" class="destino-opcao" data-destino-slug="um-dia-para-sorrir" data-destino="Um Dia para Sorrir">Um Dia para Sorrir</button>
         </div>
-        <p style="font-size:.76rem;opacity:.55;margin-top:6px">A identificação acima registra apenas sua intenção de contribuição — o PIX é único para toda a igreja.</p>
+        <p style="font-size:.76rem;opacity:.55;margin-top:6px">A seleção acima registra sua intenção de contribuição. Atualmente, a ISSD utiliza uma única chave PIX para todas as suas contribuições — não existem contas separadas por finalidade.</p>
       </div>
       <p class="versiculo">"Cada um dê conforme determinou em seu coração, não com pesar ou por obrigação, pois Deus ama quem dá com alegria." — 2 Coríntios 9:7</p>
     </div>
 
     <div class="qr-card">
       <p class="qr-kicker">Doe via PIX</p>
+      <p class="destino-atual">Você está contribuindo para: <strong id="destino-atual-nome">Igreja / Oferta</strong></p>
       <div class="qr-frame">
         <img src="img/pix-qrcode.png" alt="QR Code PIX para doação — Igreja Salvador do Sétimo Dia" width="200" height="200">
       </div>
@@ -221,6 +252,7 @@
         <code id="chave-pix"></code>
         <button type="button" id="btn-copiar-pix">Copiar chave</button>
       </div>
+      <a href="#" id="link-conhecer-campanha" class="btn-texto" style="display:none;margin-top:14px">Conhecer a campanha →</a>
     </div>
   </div>
 </section>
@@ -252,7 +284,7 @@
 <footer class="rodape-premium">
   <div class="rodape-grid">
     <div class="rodape-marca">
-      <p class="sigla" style="margin:0 0 12px">I S S D</p>
+      <img src="img/logo/issd-logo-premium.png" alt="ISSD — Igreja Salvador do Sétimo Dia — Fé que inspira, pessoas que se unem, ação que transforma" class="rodape-logo">
       <p>Igreja Salvador do Sétimo Dia — uma comunidade unida pela fé e pelo propósito de transformar boas intenções em ações concretas.</p>
     </div>
     <div class="rodape-col">
@@ -269,7 +301,7 @@
     </div>
     <div class="rodape-col">
       <h4>Transparência</h4>
-      <span style="display:block;opacity:.4;font-size:.88rem;margin-bottom:11px">Pedido de Oração <em style="opacity:.8">— em breve</em></span>
+      <a href="index.html#pedido-oracao">Pedido de Oração</a>
       <span style="display:block;opacity:.4;font-size:.88rem;margin-bottom:11px">Transparência <em style="opacity:.8">— em breve</em></span>
       <a href="eventos.html">Eventos</a>
     </div>
@@ -326,9 +358,15 @@
             <span class="saiba-mais">Conhecer a campanha →</span>
             ${c.data_fim ? `<span class="contador-mini">${diasRestantes(c.data_fim)} dias restantes</span>` : ''}
           </div>
+          <span class="btn-texto btn-contribuir-card" role="button" tabindex="0" data-destino-slug="${c.slug || ''}">Contribuir agora →</span>
         </div>
       </a>`;
     }).join('');
+    document.querySelectorAll('.btn-contribuir-card').forEach(el => {
+      const ativar = (e) => { e.preventDefault(); e.stopPropagation(); selecionarDestino(el.dataset.destinoSlug, true); };
+      el.addEventListener('click', ativar);
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') ativar(e); });
+    });
   }
   carregarCampanhasHome();
 
@@ -355,20 +393,105 @@
   }
   carregarEventosHome();
 
-  // ---------- Generosidade: seletor de destino + PIX ----------
+  // ---------- Generosidade: seletor de destino + PIX (funcional) ----------
+  // slug -> { rótulo exibido, link "Conhecer a campanha" (vazio = Igreja/Oferta, sem página própria) }
+  const DESTINOS = {
+    'igreja-oferta': { nome: 'Igreja / Oferta', link: '' },
+    'nossa-casa-nosso-proposito': { nome: 'Aquisição da Sede', link: 'campanhas/nossa-casa-nosso-proposito.html' },
+    'um-dia-para-sorrir': { nome: 'Um Dia para Sorrir', link: 'campanhas/um-dia-para-sorrir.html' },
+  };
+
+  function selecionarDestino(slug, scroll) {
+    const info = DESTINOS[slug] || DESTINOS['igreja-oferta'];
+    document.querySelectorAll('.destino-opcao').forEach(b => b.classList.toggle('ativo', b.dataset.destinoSlug === slug));
+    document.getElementById('destino-atual-nome').textContent = info.nome;
+    const linkCampanha = document.getElementById('link-conhecer-campanha');
+    if (info.link) {
+      linkCampanha.href = info.link;
+      linkCampanha.style.display = 'inline-block';
+    } else {
+      linkCampanha.style.display = 'none';
+    }
+    if (scroll) {
+      document.getElementById('generosidade').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => document.querySelector('.qr-card').scrollIntoView({ behavior: 'smooth', block: 'center' }), 350);
+    }
+  }
+
   document.querySelectorAll('.destino-opcao').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.destino-opcao').forEach(b => b.classList.remove('ativo'));
-      btn.classList.add('ativo');
-    });
+    btn.addEventListener('click', () => selecionarDestino(btn.dataset.destinoSlug, false));
   });
+
+  // Deep-link: qualquer CTA do site pode levar direto a index.html?contribuir=<slug>#generosidade
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const contribuir = params.get('contribuir');
+    if (contribuir && DESTINOS[contribuir]) {
+      selecionarDestino(contribuir, true);
+    }
+  })();
+
   carregarChavePixAvulsa();
 
-  // ---------- CTA "Pedido de oração" ainda sem seção própria nesta fase ----------
+  // ---------- CTA "Pedido de oração" ----------
   document.getElementById('link-pedido-oracao').addEventListener('click', (e) => {
     e.preventDefault();
-    alert('O canal de Pedido de Oração está em preparação e chega na próxima etapa do site. Por enquanto, fale conosco por e-mail.');
+    document.getElementById('form-oracao').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('campo-pedido-oracao').focus({ preventScroll: true });
   });
+
+  // ---------- Pedido de Oração: envio real para Supabase ----------
+  (function () {
+    const form = document.getElementById('form-oracao');
+    if (!form) return;
+    const msgEl = document.getElementById('oracao-mensagem');
+    const btn = document.getElementById('btn-enviar-oracao');
+    const anonimoEl = document.getElementById('campo-oracao-anonimo');
+    const nomeEl = document.getElementById('campo-oracao-nome');
+    const telEl = document.getElementById('campo-oracao-telefone');
+    const emailEl = document.getElementById('campo-oracao-email');
+    const pedidoEl = document.getElementById('campo-pedido-oracao');
+
+    function setCamposIdentificacaoDesabilitados(desabilitado) {
+      [nomeEl, telEl, emailEl].forEach(el => { el.disabled = desabilitado; if (desabilitado) el.value = ''; });
+    }
+    anonimoEl.addEventListener('change', () => setCamposIdentificacaoDesabilitados(anonimoEl.checked));
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msgEl.textContent = '';
+      msgEl.className = 'oracao-mensagem';
+      const pedido = pedidoEl.value.trim();
+      if (pedido.length < 3) {
+        msgEl.textContent = 'Escreva seu pedido antes de enviar.';
+        msgEl.classList.add('erro');
+        pedidoEl.focus();
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+      const anonimo = anonimoEl.checked;
+      const payload = {
+        pedido,
+        anonimo,
+        nome: anonimo ? null : (nomeEl.value.trim() || null),
+        telefone: anonimo ? null : (telEl.value.trim() || null),
+        email: anonimo ? null : (emailEl.value.trim() || null),
+      };
+      const { error } = await supabase.from('pedidos_oracao').insert(payload);
+      btn.disabled = false;
+      btn.textContent = 'Enviar pedido de oração';
+      if (error) {
+        msgEl.textContent = 'Não foi possível enviar seu pedido neste momento. Tente novamente em alguns instantes.';
+        msgEl.classList.add('erro');
+        return;
+      }
+      form.reset();
+      setCamposIdentificacaoDesabilitados(false);
+      msgEl.textContent = 'Pedido recebido. Obrigado por confiar seu pedido à ISSD. Ele será tratado com respeito e discrição pela equipe responsável.';
+      msgEl.classList.add('sucesso');
+    });
+  })();
 </script>
 </body>
 </html>
