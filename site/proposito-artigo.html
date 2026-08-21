@@ -82,7 +82,7 @@
       corpo.innerHTML = '<p>Este conteúdo não está disponível no momento. <a href="proposito.html">Voltar para 7 Minutos de Propósito</a>.</p>';
       return;
     }
-    document.getElementById('titulo-aba').textContent = (a.seo_title || a.titulo) + ' · ISSD';
+    document.getElementById('titulo-aba').textContent = a.seo_title || (a.titulo + ' · ISSD');
     document.getElementById('meta-desc').setAttribute('content', a.meta_description || a.subtitulo || '');
     document.getElementById('og-title').setAttribute('content', a.titulo);
     document.getElementById('og-desc').setAttribute('content', a.meta_description || a.subtitulo || '');
