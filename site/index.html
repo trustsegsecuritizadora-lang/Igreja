@@ -4,62 +4,221 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Igreja Salvador do Sétimo Dia</title>
-<meta name="description" content="Igreja Salvador do Sétimo Dia — horários de culto, endereço e eventos.">
+<meta name="description" content="Igreja Salvador do Sétimo Dia — horários de culto, endereço, eventos e doações.">
 <link rel="stylesheet" href="../app/css/style.css">
 <style>
-  .pubnav{max-width:960px;margin:0 auto;padding:18px 20px 0;display:flex;align-items:center;gap:22px}
-  .pubnav a{color:var(--parchment-100);opacity:.75;text-decoration:none;font-size:.9rem;letter-spacing:.02em}
-  .pubnav a:hover,.pubnav a.active{opacity:1;color:var(--gold-300)}
-  .pubnav .area-interna{margin-left:auto;border:1px solid rgba(216,188,138,.4);padding:6px 14px;border-radius:999px;font-size:.82rem}
-  .pubnav .area-interna:hover{border-color:var(--gold-300);background:rgba(184,147,90,.12)}
-  .hero{background:linear-gradient(180deg,var(--navy-950),var(--navy-800));color:var(--parchment-100);padding:16px 20px 70px;text-align:center}
-  .hero .selo{
-    width:64px;height:64px;margin:28px auto 18px;border-radius:50%;
-    display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(circle at 35% 30%,var(--gold-300),var(--gold-500) 70%);
-    color:var(--navy-950);font-family:'EB Garamond',serif;font-weight:600;font-size:1.6rem;
-    box-shadow:0 0 0 4px rgba(216,188,138,.18);
+  :root{
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  .hero h1{color:var(--gold-300);font-size:2.3rem;margin:0 0 10px}
-  .hero p{opacity:.8;max-width:560px;margin:0 auto;font-size:1.05rem;line-height:1.5}
+  *{box-sizing:border-box}
+  body{background:var(--parchment-50)}
+
+  .textured{position:relative;isolation:isolate}
+  .textured::before{
+    content:"";position:absolute;inset:0;background-image:var(--grain);
+    opacity:.05;mix-blend-mode:overlay;pointer-events:none;z-index:0;
+  }
+  .textured > *{position:relative;z-index:1}
+
+  .pubnav{
+    max-width:1040px;margin:0 auto;padding:20px 24px 0;
+    display:flex;align-items:center;gap:26px;
+  }
+  .pubnav a{
+    color:var(--parchment-100);opacity:.7;text-decoration:none;
+    font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600;
+    padding-bottom:4px;border-bottom:1px solid transparent;
+  }
+  .pubnav a:hover,.pubnav a.active{opacity:1;color:var(--gold-300);border-color:rgba(216,188,138,.5)}
+  .pubnav .area-interna{
+    margin-left:auto;opacity:1;border:1px solid rgba(216,188,138,.4);
+    padding:8px 18px;border-radius:999px;font-size:.76rem;letter-spacing:.06em;
+  }
+  .pubnav .area-interna:hover{border-color:var(--gold-300);background:rgba(184,147,90,.14)}
+
+  .hero{
+    background:
+      radial-gradient(ellipse 900px 480px at 50% -10%, rgba(216,188,138,.14), transparent 60%),
+      linear-gradient(175deg,var(--navy-950),var(--navy-800) 65%,var(--navy-700));
+    color:var(--parchment-100);padding:0 20px 92px;text-align:center;overflow:hidden;
+  }
+
+  .emblema{
+    width:112px;height:112px;margin:44px auto 22px;position:relative;
+  }
+  .emblema svg{width:100%;height:100%;display:block;
+    filter:drop-shadow(0 6px 18px rgba(0,0,0,.35));
+  }
+
+  .sigla{
+    font-family:'EB Garamond',serif;font-weight:600;letter-spacing:.34em;
+    text-transform:uppercase;font-size:.92rem;color:var(--gold-300);
+    margin:0 0 6px;opacity:.92;
+  }
+  .hero h1{color:var(--parchment-50);font-size:2.5rem;margin:0 0 14px;line-height:1.15}
+  .hero p{opacity:.78;max-width:560px;margin:0 auto;font-size:1.05rem;line-height:1.6}
+  .hero .cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:30px}
   .hero .cta{
-    display:inline-block;margin-top:26px;padding:12px 28px;border-radius:999px;
-    background:var(--gold-500);color:var(--navy-950);text-decoration:none;
-    font-weight:600;letter-spacing:.02em;
+    display:inline-block;padding:13px 30px;border-radius:999px;
+    text-decoration:none;font-weight:600;letter-spacing:.03em;font-size:.92rem;
+    transition:transform .15s ease;
   }
-  .hero .cta:hover{background:var(--gold-300)}
-  .wrap{max-width:960px;margin:0 auto;padding:50px 20px}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
-  @media(max-width:720px){.grid2{grid-template-columns:1fr}.pubnav{flex-wrap:wrap}}
-  .info-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:26px 28px;box-shadow:var(--shadow)}
-  .info-card h2{font-size:1.2rem;margin:0 0 14px;color:var(--navy-800)}
-  .culto-linha{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+  .hero .cta:hover{transform:translateY(-1px)}
+  .hero .cta.gold{background:linear-gradient(180deg,var(--gold-300),var(--gold-500));color:var(--navy-950)}
+  .hero .cta.ghost{border:1px solid rgba(216,188,138,.45);color:var(--parchment-100)}
+  .hero .cta.ghost:hover{background:rgba(216,188,138,.1)}
+
+  .wrap{max-width:1040px;margin:0 auto;padding:56px 20px}
+  .wrap.tight{padding-top:0}
+  .eyebrow{
+    font-family:'EB Garamond',serif;font-weight:600;letter-spacing:.24em;text-transform:uppercase;
+    font-size:.78rem;color:var(--gold-500);text-align:center;margin:0 0 8px;
+  }
+  .section-title{text-align:center;font-size:1.7rem;margin:0 0 40px;color:var(--navy-950)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+
+  .info-card{
+    background:#fff;border:1px solid var(--border);border-radius:14px;
+    padding:30px 32px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  .info-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--gold-500),var(--gold-300))}
+  .info-card h2{font-size:1.15rem;margin:0 0 18px;color:var(--navy-800);display:flex;align-items:center;gap:10px}
+  .info-card h2 .ico{width:20px;height:20px;flex-shrink:0;color:var(--gold-500)}
+  .culto-linha{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
   .culto-linha:last-child{border-bottom:none}
   .culto-linha .dia{font-weight:600;color:var(--navy-800)}
-  .culto-linha .hora{color:var(--gold-500);font-weight:600}
-  address{font-style:normal;line-height:1.6;color:var(--ink-900)}
-  .mapa-wrap{margin-top:16px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
-  .mapa-wrap iframe{display:block;width:100%;height:220px;border:0}
-  footer{text-align:center;padding:30px;color:var(--ink-500);font-size:.8rem}
+  .culto-linha .hora{color:var(--gold-500);font-weight:700;font-family:'EB Garamond',serif;font-size:1.05rem}
+  address{font-style:normal;line-height:1.65;color:var(--ink-900)}
+  .mapa-wrap{margin-top:16px;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+  .mapa-wrap iframe{display:block;width:100%;height:200px;border:0}
+
+  .contribua{
+    background:linear-gradient(155deg,var(--navy-950),var(--navy-800) 55%,var(--navy-700));
+    color:var(--parchment-100);
+  }
+  .contribua-grid{
+    max-width:1040px;margin:0 auto;padding:70px 20px;
+    display:grid;grid-template-columns:1.05fr .95fr;gap:0;align-items:center;
+  }
+  @media(max-width:820px){.contribua-grid{grid-template-columns:1fr;gap:40px;padding:56px 20px}}
+  .contribua-texto .eyebrow{text-align:left;color:var(--gold-300)}
+  .contribua-texto h2{
+    font-size:2rem;line-height:1.2;margin:0 0 16px;color:var(--parchment-50);
+  }
+  .contribua-texto p{opacity:.78;line-height:1.65;max-width:440px;margin:0 0 10px}
+  .contribua-texto .versiculo{
+    margin-top:22px;padding-left:16px;border-left:2px solid rgba(216,188,138,.5);
+    font-family:'EB Garamond',serif;font-style:italic;opacity:.75;font-size:.98rem;
+  }
+
+  .qr-card{
+    background:linear-gradient(165deg,#152238,var(--navy-950));
+    border:1px solid rgba(216,188,138,.22);
+    border-radius:18px;padding:30px 28px 26px;
+    box-shadow:0 20px 50px rgba(0,0,0,.35);
+    text-align:center;max-width:340px;margin:0 auto;
+    position:relative;isolation:isolate;
+  }
+  .qr-card::before{
+    content:"";position:absolute;inset:0;border-radius:18px;background-image:var(--grain);
+    opacity:.06;mix-blend-mode:overlay;pointer-events:none;
+  }
+  .qr-card .qr-kicker{
+    font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-300);
+    margin:0 0 14px;font-weight:600;position:relative;
+  }
+  .qr-frame{
+    background:var(--parchment-50);border-radius:12px;padding:14px;
+    display:inline-block;position:relative;
+  }
+  .qr-frame img{display:block;width:200px;height:200px;border-radius:4px}
+  .qr-card .aponte{
+    margin:16px 0 0;font-size:.86rem;color:var(--parchment-100);opacity:.85;position:relative;
+  }
+  .chave-pix-linha{
+    margin-top:18px;padding-top:16px;border-top:1px solid rgba(216,188,138,.2);
+    display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;position:relative;
+  }
+  .chave-pix-linha code{
+    background:rgba(216,188,138,.1);border:1px solid rgba(216,188,138,.25);
+    color:var(--gold-300);padding:6px 10px;border-radius:7px;font-size:.78rem;
+    max-width:100%;overflow-wrap:anywhere;
+  }
+  .chave-pix-linha button{
+    background:transparent;border:1px solid rgba(216,188,138,.4);color:var(--parchment-100);
+    padding:6px 12px;border-radius:999px;font-size:.76rem;cursor:pointer;width:auto;
+  }
+  .chave-pix-linha button:hover{border-color:var(--gold-300);color:var(--gold-300)}
+
+  footer{text-align:center;padding:36px 20px;color:var(--ink-500);font-size:.8rem;background:var(--parchment-50)}
 </style>
 </head>
 <body>
-  <div class="hero">
+  <div class="hero textured">
     <nav class="pubnav">
       <a href="index.html" class="active">Início</a>
       <a href="eventos.html">Eventos & Campanhas</a>
       <a class="area-interna" href="https://sistema.salvadordosetimodia.com.br/login.html">Área interna</a>
     </nav>
-    <div class="selo">ISD</div>
+
+    <div class="emblema" aria-hidden="true">
+      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="anelOuro" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stop-color="#F1DFB8"/>
+            <stop offset="55%" stop-color="#D8BC8A"/>
+            <stop offset="100%" stop-color="#B8935A"/>
+          </radialGradient>
+          <linearGradient id="cruzOuro" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#F1DFB8"/>
+            <stop offset="100%" stop-color="#B8935A"/>
+          </linearGradient>
+          <radialGradient id="fundoMedalha" cx="50%" cy="42%" r="65%">
+            <stop offset="0%" stop-color="#28405C"/>
+            <stop offset="100%" stop-color="#0F1B2D"/>
+          </radialGradient>
+        </defs>
+
+        <circle cx="60" cy="60" r="58" fill="none" stroke="url(#anelOuro)" stroke-width="1.4" opacity=".55"/>
+        <circle cx="60" cy="60" r="52" fill="url(#fundoMedalha)" stroke="url(#anelOuro)" stroke-width="2"/>
+
+        <g opacity=".9">
+          <circle cx="60" cy="17" r="1.6" fill="#D8BC8A"/>
+          <circle cx="60" cy="103" r="1.6" fill="#D8BC8A"/>
+          <circle cx="17" cy="60" r="1.6" fill="#D8BC8A"/>
+          <circle cx="103" cy="60" r="1.6" fill="#D8BC8A"/>
+        </g>
+
+        <g transform="translate(60,58)">
+          <rect x="-6" y="-32" width="12" height="62" rx="3.5" fill="url(#cruzOuro)"/>
+          <rect x="-21" y="-16" width="42" height="12" rx="3.5" fill="url(#cruzOuro)"/>
+          <rect x="-6" y="-32" width="12" height="62" rx="3.5" fill="none" stroke="#0F1B2D" stroke-opacity=".18" stroke-width="1"/>
+          <rect x="-21" y="-16" width="42" height="12" rx="3.5" fill="none" stroke="#0F1B2D" stroke-opacity=".18" stroke-width="1"/>
+        </g>
+      </svg>
+    </div>
+
+    <p class="sigla">I S S D</p>
     <h1>Igreja Salvador do Sétimo Dia</h1>
     <p>Uma comunidade de fé reunida para adorar, aprender e servir. Todos são bem-vindos para caminhar conosco.</p>
-    <a class="cta" href="eventos.html">Ver eventos e campanhas</a>
+    <div class="cta-row">
+      <a class="cta gold" href="eventos.html">Ver eventos e campanhas</a>
+      <a class="cta ghost" href="#contribua">Fazer uma doação</a>
+    </div>
   </div>
 
   <div class="wrap">
+    <p class="eyebrow">Venha nos conhecer</p>
+    <h2 class="section-title liturgica">Horários & Endereço</h2>
     <div class="grid2">
       <div class="info-card">
-        <h2 class="liturgica">Horários de culto</h2>
+        <h2>
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+          Horários de culto
+        </h2>
         <div class="culto-linha">
           <span class="dia">Terça-feira</span>
           <span class="hora">18h30</span>
@@ -67,7 +226,10 @@
       </div>
 
       <div class="info-card">
-        <h2 class="liturgica">Endereço</h2>
+        <h2>
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.3"/></svg>
+          Endereço
+        </h2>
         <address>
           Av. Luís Carlos Prestes, 410 — Sala 119 A<br>
           Barra da Tijuca — Rio de Janeiro/RJ<br>
@@ -84,6 +246,50 @@
     </div>
   </div>
 
+  <div class="contribua textured" id="contribua">
+    <div class="contribua-grid">
+      <div class="contribua-texto">
+        <p class="eyebrow">Ofertas & Dízimos</p>
+        <h2 class="liturgica">Contribua para o crescimento da nossa igreja</h2>
+        <p>Sua doação sustenta a obra, os cultos e os projetos da Igreja Salvador do Sétimo Dia. Aponte a câmera do seu banco para o QR Code ao lado ou use a chave PIX abaixo.</p>
+        <p class="versiculo">"Cada um dê conforme determinou em seu coração, não com pesar ou por obrigação, pois Deus ama quem dá com alegria." — 2 Coríntios 9:7</p>
+      </div>
+
+      <div class="qr-card">
+        <p class="qr-kicker">Doe via PIX</p>
+        <div class="qr-frame">
+          <img src="img/pix-qrcode.png" alt="QR Code PIX para doação — Igreja Salvador do Sétimo Dia" width="200" height="200">
+        </div>
+        <p class="aponte">Aponte o app do seu banco para o QR Code</p>
+        <div class="chave-pix-linha" id="chave-pix-wrap" style="display:none">
+          <code id="chave-pix"></code>
+          <button type="button" id="btn-copiar-pix">Copiar chave</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer>SGDE — Sistema de Gestão Digital Eclesiástico</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://fragxrqofweahrhgozhq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZyYWd4cnFvZndlYWhyaGdvemhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzcyNzUsImV4cCI6MjEwMjgxMzI3NX0.A1mEQtBloGuuJJt9QhL7002RHCgBKOV5dIPdCsTvVyo';
+    window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    (async function carregarChavePix() {
+      const { data } = await supabase.from('configuracoes_publicas').select('valor').eq('chave', 'pix_doacao_avulsa').maybeSingle();
+      if (data && data.valor) {
+        document.getElementById('chave-pix').textContent = data.valor;
+        document.getElementById('chave-pix-wrap').style.display = 'flex';
+        document.getElementById('btn-copiar-pix').addEventListener('click', () => {
+          navigator.clipboard.writeText(data.valor);
+          const btn = document.getElementById('btn-copiar-pix');
+          btn.textContent = 'Copiado!';
+          setTimeout(() => { btn.textContent = 'Copiar chave'; }, 2000);
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
