@@ -11,6 +11,7 @@
 <meta property="og:url" content="https://salvadordosetimodia.com.br/proposito.html">
 <meta property="og:image" content="https://salvadordosetimodia.com.br/img/logo/issd-og-image.jpg">
 <meta name="theme-color" content="#0A1220">
+<link rel="canonical" href="https://salvadordosetimodia.com.br/proposito.html">
 <link rel="icon" href="img/logo/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" sizes="180x180" href="img/logo/apple-touch-icon.png">
 <link rel="stylesheet" href="css/site.css">
@@ -20,6 +21,31 @@
   .prop-hero h1{color:var(--parchment-50);font-size:clamp(1.9rem,4vw,2.5rem);margin:0 0 14px}
   .prop-hero p{color:var(--parchment-100);opacity:.82;font-size:1.05rem;line-height:1.7}
   .prop-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:28px}
+  /* Artigo(s) em destaque — enquanto houver menos de 3 publicados, evita um
+     grid visualmente vazio com um único card. */
+  .prop-destaque-lista{display:flex;flex-direction:column;gap:40px}
+  .prop-destaque{
+    display:grid;grid-template-columns:1fr 1.1fr;align-items:stretch;
+    background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 18px 50px rgba(15,27,45,.10);
+    border:1px solid var(--border);text-decoration:none;color:inherit;
+  }
+  .pd-foto{position:relative;min-height:440px;background-size:cover;background-position:center;background-color:var(--navy-950)}
+  .pd-foto::after{
+    content:"";position:absolute;inset:0;
+    background:
+      linear-gradient(155deg, rgba(10,18,32,.60), rgba(15,27,45,.14) 55%, transparent 78%),
+      linear-gradient(335deg, rgba(184,147,90,.30), transparent 42%);
+  }
+  .pd-conteudo{padding:clamp(32px,4vw,56px);display:flex;flex-direction:column;gap:16px;justify-content:center}
+  .pd-eyebrow{font-size:.74rem;letter-spacing:.09em;text-transform:uppercase;color:var(--gold-500);font-weight:700;margin:0}
+  .pd-conteudo h2{font-size:clamp(1.5rem,2.6vw,2.1rem);color:var(--navy-950);line-height:1.28;margin:0}
+  .pd-resumo{color:var(--ink-500);font-size:1.02rem;line-height:1.72;margin:0}
+  .pd-meta{color:var(--ink-500);font-size:.86rem;font-family:'IBM Plex Mono',monospace;margin:0}
+  .pd-cta-row{margin-top:4px}
+  @media(max-width:900px){
+    .prop-destaque{grid-template-columns:1fr}
+    .pd-foto{min-height:240px}
+  }
   .prop-card{
     background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;
     text-decoration:none;color:inherit;box-shadow:var(--shadow);display:flex;flex-direction:column;
@@ -55,8 +81,17 @@
 </header>
 
 <section class="wrap" style="padding-top:8px;padding-bottom:80px">
-  <div id="lista-artigos" class="prop-lista">
-    <div class="skeleton" style="height:280px;border-radius:16px"></div>
+  <div id="lista-artigos" class="prop-destaque-lista">
+    <a class="prop-destaque" href="proposito/o-que-define-uma-vida-bem-sucedida">
+      <div class="pd-foto" style="background-image:url('https://images.unsplash.com/photo-1781165804627-9eb1486c40ce?auto=format&amp;fit=crop&amp;w=1400&amp;q=75')"></div>
+      <div class="pd-conteudo">
+        <p class="pd-eyebrow">7 Minutos de Propósito #01</p>
+        <h2>O que realmente define uma vida bem-sucedida?</h2>
+        <p class="pd-resumo">Sucesso, propósito, família, liderança, generosidade e fé: uma reflexão sobre o que fazemos com aquilo que conquistamos.</p>
+        <p class="pd-meta">7 min de leitura</p>
+        <div class="pd-cta-row"><span class="btn-texto">Ler reflexão →</span></div>
+      </div>
+    </a>
   </div>
 </section>
 
@@ -75,16 +110,40 @@
   async function carregarArtigos() {
     const el = document.getElementById('lista-artigos');
     const { data, error } = await supabase.from('conteudos_proposito')
-      .select('titulo, subtitulo, slug, imagem_url, categoria, tempo_leitura_min, data_publicacao')
-      .eq('status', 'publicado').order('data_publicacao', { ascending: false });
+      .select('titulo, subtitulo, slug, imagem_url, categoria, tempo_leitura_min, data_publicacao, meta_description')
+      .eq('status', 'publicado').order('data_publicacao', { ascending: true });
 
     if (error || !data || data.length === 0) {
-      el.style.display = 'block';
+      el.className = '';
       el.innerHTML = '<div class="prop-vazio"><p>Novos conteúdos de 7 Minutos de Propósito estão a caminho. Volte em breve.</p></div>';
       return;
     }
-    el.innerHTML = data.map(a => `
-      <a class="prop-card" href="proposito-artigo.html?slug=${encodeURIComponent(a.slug)}">
+
+    // Numeração é pela ordem de publicação (#01 = primeiro artigo publicado).
+    const numerados = data.map((a, i) => ({ ...a, numero: String(i + 1).padStart(2, '0') }));
+
+    if (numerados.length < 3) {
+      // Enquanto houver poucos artigos, evita um grid vazio: layout editorial
+      // em destaque (imagem | conteúdo), mais recente primeiro.
+      el.className = 'prop-destaque-lista';
+      el.innerHTML = numerados.slice().reverse().map(a => `
+        <a class="prop-destaque" href="proposito/${encodeURIComponent(a.slug)}">
+          <div class="pd-foto" style="${a.imagem_url ? `background-image:url('${a.imagem_url}')` : ''}"></div>
+          <div class="pd-conteudo">
+            <p class="pd-eyebrow">7 Minutos de Propósito #${a.numero}</p>
+            <h2>${a.titulo}</h2>
+            <p class="pd-resumo">${a.meta_description || a.subtitulo || ''}</p>
+            <p class="pd-meta">${a.tempo_leitura_min ? a.tempo_leitura_min + ' min de leitura' : ''}</p>
+            <div class="pd-cta-row"><span class="btn-texto">Ler reflexão →</span></div>
+          </div>
+        </a>`).join('');
+      return;
+    }
+
+    // A partir de 3 artigos publicados, evolui automaticamente para grid.
+    el.className = 'prop-lista';
+    el.innerHTML = numerados.slice().reverse().map(a => `
+      <a class="prop-card" href="proposito/${encodeURIComponent(a.slug)}">
         <div class="capa" style="${a.imagem_url ? `background-image:url('${a.imagem_url}')` : ''}"></div>
         <div class="miolo">
           <p class="categoria">${a.categoria || 'Propósito'}</p>

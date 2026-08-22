@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://salvadordosetimodia.com.br/sitemap.xml
