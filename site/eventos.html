@@ -51,13 +51,14 @@
   <section class="wrap tight" style="padding-top:56px">
     <p class="eyebrow">Agenda</p>
     <h2 class="section-title">Próximos eventos</h2>
-    <div id="lista-eventos" style="margin-top:32px"><p style="color:var(--ink-500)">Nossa próxima agenda está sendo preparada. Acompanhe as novidades da ISSD por aqui.</p></div>
+    <div id="lista-eventos" style="margin-top:32px"><!--SSR:eventos-lista--><p style="color:var(--ink-500)">Nossa próxima agenda está sendo preparada. Acompanhe as novidades da ISSD por aqui.</p><!--/SSR:eventos-lista--></div>
   </section>
 
   <section class="wrap tight" style="padding-top:8px">
     <p class="eyebrow">Propósito em ação</p>
     <h2 class="section-title">Campanhas em andamento</h2>
     <div id="lista-campanhas" class="campanhas-grid" style="margin-top:32px">
+      <!--SSR:campanhas-eventos-->
       <a class="campanha-card-simples" href="campanhas/nossa-casa-nosso-proposito.html">
         <span class="tag">Campanha institucional</span>
         <h3>Campanha Aquisição da Sede</h3>
@@ -79,6 +80,7 @@
           <span class="contador-mini">47 dias restantes</span>
         </div>
       </a>
+      <!--/SSR:campanhas-eventos-->
     </div>
   </section>
 
@@ -94,7 +96,7 @@
         </div>
         <p class="aponte">Aponte o app do seu banco para o QR Code</p>
         <div class="chave-pix-linha" id="chave-pix-wrap">
-          <code id="chave-pix">1d3dc28b-dec0-4dac-ba1b-fb257f6cbb21</code>
+          <code id="chave-pix"><!--SSR:pix-->1d3dc28b-dec0-4dac-ba1b-fb257f6cbb21<!--/SSR:pix--></code>
           <button type="button" id="btn-copiar-pix">Copiar chave</button>
         </div>
       </div>
