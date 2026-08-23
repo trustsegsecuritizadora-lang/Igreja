@@ -56,9 +56,9 @@
 
 <div class="painel-progresso reveal">
   <div class="painel-numeros">
-    <span class="arrecadado" id="valor-arrecadado">R$ 0,00</span>
-    <span class="meta">de <span id="valor-meta">R$ 200.000,00</span></span>
-    <span class="pct" id="valor-pct">0% da meta</span>
+    <span class="arrecadado" id="valor-arrecadado"><!--SSR:arrecadado-->R$ 0,00<!--/SSR:arrecadado--></span>
+    <span class="meta">de <span id="valor-meta"><!--SSR:meta-->R$ 200.000,00<!--/SSR:meta--></span></span>
+    <span class="pct" id="valor-pct"><!--SSR:pct-->0% da meta<!--/SSR:pct--></span>
   </div>
   <div class="barra"><div id="barra-progresso" style="width:0%"></div></div>
   <div class="painel-cta-row">
@@ -82,7 +82,7 @@
       </div>
       <p class="aponte">Aponte o app do seu banco para o QR Code</p>
       <div class="chave-pix-linha" id="chave-pix-wrap">
-        <code id="chave-pix">1d3dc28b-dec0-4dac-ba1b-fb257f6cbb21</code>
+        <code id="chave-pix"><!--SSR:pix-->1d3dc28b-dec0-4dac-ba1b-fb257f6cbb21<!--/SSR:pix--></code>
         <button type="button" id="btn-copiar-pix">Copiar chave</button>
       </div>
     </div>

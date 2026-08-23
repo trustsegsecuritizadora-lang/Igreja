@@ -72,12 +72,12 @@
 <div class="painel-progresso reveal" id="painel-progresso">
   <div id="aviso-missao-cumprida" class="missao-cumprida oculto">Missão cumprida — veja abaixo o resultado desta campanha.</div>
   <div class="painel-numeros">
-    <span class="arrecadado" id="valor-arrecadado">R$ 0,00</span>
-    <span class="meta">de <span id="valor-meta">R$ 5.000,00</span></span>
-    <span class="pct" id="valor-pct">0% da meta</span>
+    <span class="arrecadado" id="valor-arrecadado"><!--SSR:arrecadado-->R$ 0,00<!--/SSR:arrecadado--></span>
+    <span class="meta">de <span id="valor-meta"><!--SSR:meta-->R$ 5.000,00<!--/SSR:meta--></span></span>
+    <span class="pct" id="valor-pct"><!--SSR:pct-->0% da meta<!--/SSR:pct--></span>
   </div>
   <div class="barra"><div id="barra-progresso" style="width:0%"></div></div>
-  <div class="painel-contador"><span id="contador-dias" class="num">47</span><span id="contador-texto">dias para encerrarmos a campanha</span></div>
+  <div class="painel-contador"><span id="contador-dias" class="num"><!--SSR:dias-->47<!--/SSR:dias--></span><span id="contador-texto">dias para encerrarmos a campanha</span></div>
   <div class="painel-cta-row">
     <a class="btn btn-primario" href="#pix">Quero contribuir</a>
     <a class="btn btn-secundario on-light" href="#parceiros">Convide sua empresa</a>
@@ -102,7 +102,7 @@
 
       <div class="instituicao-card">
         <p class="rotulo">Instituição beneficiada</p>
-        <p id="texto-instituicao">Instituição parceira em processo de definição.</p>
+        <p id="texto-instituicao"><!--SSR:instituicao-->Instituição parceira em processo de definição.<!--/SSR:instituicao--></p>
       </div>
 
       <div class="parceiros-card" id="parceiros">
@@ -119,7 +119,7 @@
       </div>
       <p class="aponte">Aponte o app do seu banco para o QR Code</p>
       <div class="chave-pix-linha" id="chave-pix-wrap">
-        <code id="chave-pix">1d3dc28b-dec0-4dac-ba1b-fb257f6cbb21</code>
+        <code id="chave-pix"><!--SSR:pix-->1d3dc28b-dec0-4dac-ba1b-fb257f6cbb21<!--/SSR:pix--></code>
         <button type="button" id="btn-copiar-pix">Copiar chave</button>
       </div>
     </div>
