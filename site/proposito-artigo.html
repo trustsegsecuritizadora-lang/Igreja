@@ -102,7 +102,18 @@
   document.getElementById('ano-atual').textContent = new Date().getFullYear();
 
   async function carregarArtigo() {
-    const slug = new URLSearchParams(window.location.search).get('slug');
+    // A URL "bonita" (/proposito/:slug) é servida por uma reescrita do Netlify
+    // (site/_redirects) para este arquivo com ?slug=:slug — mas essa reescrita
+    // é feita no servidor: o navegador nunca navega de fato para essa URL com
+    // query string, então window.location.search fica vazio quando a página é
+    // acessada pela URL bonita. Por isso extraímos o slug também do caminho
+    // (/proposito/<slug>) como alternativa, além da query string (mantida por
+    // compatibilidade com acessos diretos a proposito-artigo.html?slug=...).
+    let slug = new URLSearchParams(window.location.search).get('slug');
+    if (!slug) {
+      const m = window.location.pathname.match(/\/proposito\/([^\/?#]+)\/?$/);
+      if (m) slug = decodeURIComponent(m[1]);
+    }
     const cab = document.getElementById('cabecalho-artigo');
     const corpo = document.getElementById('corpo-artigo');
     if (!slug) {
