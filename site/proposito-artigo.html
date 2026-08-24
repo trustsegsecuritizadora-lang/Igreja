@@ -13,9 +13,9 @@
 <meta id="og-published" property="article:published_time" content="2026-08-21">
 <meta name="theme-color" content="#0A1220">
 <link rel="canonical" id="link-canonical" href="https://salvadordosetimodia.com.br/proposito/o-que-define-uma-vida-bem-sucedida">
-<link rel="icon" href="img/logo/favicon.ico" sizes="any">
-<link rel="apple-touch-icon" sizes="180x180" href="img/logo/apple-touch-icon.png">
-<link rel="stylesheet" href="css/site.css">
+<link rel="icon" href="/img/logo/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="/img/logo/apple-touch-icon.png">
+<link rel="stylesheet" href="/css/site.css">
 <style>
   .art-hero{padding:16px 20px 48px;text-align:center}
   .art-hero-inner{max-width:680px;margin:0 auto;padding-top:36px}
@@ -46,12 +46,12 @@
 
 <header class="hero textured art-hero">
   <nav class="pubnav">
-    <a href="index.html" class="nav-logo" aria-label="ISSD — Início">
-      <img src="img/logo/issd-logo-symbol.png" alt="" width="30" height="30">
+    <a href="/index.html" class="nav-logo" aria-label="ISSD — Início">
+      <img src="/img/logo/issd-logo-symbol.png" alt="" width="30" height="30">
     </a>
-    <a href="index.html">Início</a>
-    <a href="proposito.html">7 Minutos de Propósito</a>
-    <a href="eventos.html">Eventos</a>
+    <a href="/index.html">Início</a>
+    <a href="/proposito.html">7 Minutos de Propósito</a>
+    <a href="/eventos.html">Eventos</a>
     <a class="area-interna" href="https://sistema.salvadordosetimodia.com.br/login.html">Área interna</a>
   </nav>
   <div class="art-hero-inner" id="cabecalho-artigo"><!--SSR:cabecalho-->
@@ -65,7 +65,7 @@
   <div class="moldura" id="capa-artigo" style="background-image:url('https://images.unsplash.com/photo-1781165804627-9eb1486c40ce?auto=format&amp;fit=crop&amp;w=1400&amp;q=78')"></div>
 </div>
 
-<div class="art-voltar"><a class="btn-texto" href="proposito.html">← Todos os artigos</a></div>
+<div class="art-voltar"><a class="btn-texto" href="/proposito.html">← Todos os artigos</a></div>
 <article class="art-corpo" id="corpo-artigo"><!--SSR:corpo--><p>Há uma pergunta que raramente fazemos em voz alta, mas que atravessa quase todas as decisões importantes da vida adulta: o que realmente define uma vida bem-sucedida?</p>
 <p>A resposta que a sociedade nos oferece é, em geral, bastante concreta. Sucesso é o patrimônio construído, a carreira consolidada, o reconhecimento conquistado, a influência exercida, os resultados entregues. E é importante dizer isso com clareza: não há nada de errado nessa resposta. Patrimônio, carreira, reconhecimento e resultados são frutos legítimos de esforço, disciplina, talento e trabalho bem feito. A Bíblia não condena a prosperidade nem romantiza a escassez — ela nos convida a administrar bem tudo o que nos é confiado, seja pouco ou muito.</p>
 <p>O problema não está em conquistar. O problema está em parar por aí.</p>
@@ -97,7 +97,7 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/site.js"></script>
+<script src="/js/site.js"></script>
 <script>
   document.getElementById('ano-atual').textContent = new Date().getFullYear();
 
@@ -118,7 +118,7 @@
     const corpo = document.getElementById('corpo-artigo');
     if (!slug) {
       cab.innerHTML = '<h1>Artigo não encontrado</h1>';
-      corpo.innerHTML = '<p>O conteúdo que você procura não está disponível. <a href="proposito.html">Voltar para 7 Minutos de Propósito</a>.</p>';
+      corpo.innerHTML = '<p>O conteúdo que você procura não está disponível. <a href="/proposito.html">Voltar para 7 Minutos de Propósito</a>.</p>';
       return;
     }
     const { data: a, error } = await supabase.from('conteudos_proposito')
@@ -127,7 +127,7 @@
 
     if (error || !a) {
       cab.innerHTML = '<h1>Artigo não encontrado</h1>';
-      corpo.innerHTML = '<p>Este conteúdo não está disponível no momento. <a href="proposito.html">Voltar para 7 Minutos de Propósito</a>.</p>';
+      corpo.innerHTML = '<p>Este conteúdo não está disponível no momento. <a href="/proposito.html">Voltar para 7 Minutos de Propósito</a>.</p>';
       document.getElementById('capa-artigo').style.display = 'none';
       return;
     }
