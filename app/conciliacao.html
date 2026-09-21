@@ -101,6 +101,15 @@
             .eq('status', 'conferido').gte('valor_apurado_total', m.valor - 5).lte('valor_apurado_total', m.valor + 5);
           candidatos = (lotes || []).map(l =>
             `<option value="lote:${l.id_lote}">Lote ${new Date(l.data_culto).toLocaleDateString('pt-BR')} · ${l.tipo_culto} · ${formatarMoeda(l.valor_apurado_total)}</option>`).join('');
+
+          // Lançamentos de campanha (doações avulsas lançadas manualmente,
+          // com valor/data/observação já preenchidos — inclui descrição do
+          // doador quando registrada) também entram como candidato.
+          const { data: campLanc } = await supabase.from('campanha_lancamentos')
+            .select('id_lancamento, valor, data_lancamento, observacao, campanhas(titulo)')
+            .gte('valor', m.valor - 5).lte('valor', m.valor + 5);
+          candidatos += (campLanc || []).map(c =>
+            `<option value="campanha:${c.id_lancamento}">Campanha "${c.campanhas?.titulo || '—'}" · ${new Date(c.data_lancamento + 'T00:00:00').toLocaleDateString('pt-BR')} · ${formatarMoeda(c.valor)}${c.observacao ? ' · ' + c.observacao : ''}</option>`).join('');
         } else {
           const { data: sols } = await supabase.from('solicitacoes_pagamento')
             .select('id_solicitacao, data_vencimento, valor, fornecedores(razao_social)')
@@ -129,7 +138,9 @@
       try {
         await SGDE.comSessaoValida();
         const patch = { status_conciliacao: 'conciliado', conciliado_em: new Date().toISOString(), conciliado_por_id: sessao.usuario_id };
-        if (tipo === 'lote') patch.entrada_lote_id = id; else patch.saida_solicitacao_id = id;
+        if (tipo === 'lote') patch.entrada_lote_id = id;
+        else if (tipo === 'campanha') patch.campanha_lancamento_id = id;
+        else patch.saida_solicitacao_id = id;
         const { error } = await supabase.from('movimentos_bancarios').update(patch).eq('id_movimento', movimentoId);
         if (error) throw error;
         mostrarSucesso('Movimento conciliado manualmente.'); carregarMovimentos();
