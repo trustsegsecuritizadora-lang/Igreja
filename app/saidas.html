@@ -114,7 +114,7 @@
         </table>
 
         <div class="painel-anexo" id="painel-anexar-nf" style="display:none">
-          <h4>Anexar NF/RPA</h4>
+          <h4 id="titulo-painel-anexo">Anexar NF/RPA</h4>
           <input type="hidden" id="anexo-solicitacao-id">
           <label>Arquivo (PDF, imagem ou XML da nota)</label>
           <input type="file" id="anexo-arquivo" accept=".pdf,.png,.jpg,.jpeg,.xml">
@@ -128,6 +128,16 @@
           <div class="acoes">
             <button type="button" class="btn gold" id="btn-confirmar-anexo">Enviar anexo</button>
             <button type="button" class="btn ghost" id="btn-cancelar-anexo">Cancelar</button>
+          </div>
+        </div>
+
+        <div class="painel-anexo" id="painel-remover-anexo" style="display:none">
+          <h4>Remover anexo</h4>
+          <p>O documento fiscal anexado a esta solicitação vai deixar de ficar vinculado (o arquivo continua guardado, só não fica mais associado à solicitação). Depois disso o botão "Anexar NF/RPA" volta a aparecer para enviar o correto.</p>
+          <input type="hidden" id="remover-anexo-solicitacao-id">
+          <div class="acoes">
+            <button type="button" class="btn gold" id="btn-confirmar-remover-anexo">Remover</button>
+            <button type="button" class="btn ghost" id="btn-cancelar-remover-anexo">Cancelar</button>
           </div>
         </div>
       </div>
@@ -394,7 +404,11 @@
           acoes += `<button class="btn ghost" onclick="abrirUploadNF('${r.id_solicitacao}')">Anexar NF/RPA</button>`;
         }
         if (r.documento_fiscal_id) {
-          acoes += `<button class="btn ghost" onclick="verDocumento('${r.documentos_fiscais.arquivo_url}')">Ver NF/RPA</button>`;
+          acoes += `<button class="btn ghost" onclick="verDocumento('${r.documentos_fiscais.arquivo_url}')">Ver NF/RPA</button>
+                     <button class="btn ghost" onclick="abrirUploadNF('${r.id_solicitacao}', true)">Substituir</button>`;
+          if (r.status !== 'liquidado') {
+            acoes += `<button class="btn ghost" onclick="abrirRemoverAnexo('${r.id_solicitacao}')">Remover anexo</button>`;
+          }
         }
         if (r.status === 'aprovado' && r.documento_fiscal_id) {
           acoes += `<button class="gold" onclick="liquidar('${r.id_solicitacao}')">Liquidar</button>`;
@@ -431,14 +445,44 @@
     // o que na prática travava a liquidação, o Balancete e a conciliação
     // bancária de despesas, já que todos exigem status='liquidado', que só
     // é alcançado depois de anexar a NF/RPA).
-    window.abrirUploadNF = function (id) {
+    window.abrirUploadNF = function (id, substituindo) {
       document.getElementById('anexo-solicitacao-id').value = id;
       document.getElementById('anexo-arquivo').value = '';
       document.getElementById('anexo-tipo').value = 'NFe';
+      document.getElementById('titulo-painel-anexo').textContent = substituindo ? 'Substituir NF/RPA' : 'Anexar NF/RPA';
+      document.getElementById('btn-confirmar-anexo').textContent = substituindo ? 'Enviar novo anexo' : 'Enviar anexo';
       const painel = document.getElementById('painel-anexar-nf');
       painel.style.display = 'block';
       painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     };
+
+    // "Substituir" reaproveita o mesmo fluxo de envio: sobe o arquivo novo,
+    // cria um novo registro em documentos_fiscais (o antigo não é apagado —
+    // fica no histórico, só deixa de ser o documento vinculado) e repassa
+    // o vínculo em solicitacoes_pagamento.documento_fiscal_id pro novo.
+    window.abrirRemoverAnexo = function (id) {
+      document.getElementById('remover-anexo-solicitacao-id').value = id;
+      const painel = document.getElementById('painel-remover-anexo');
+      painel.style.display = 'block';
+      painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    document.getElementById('btn-cancelar-remover-anexo').addEventListener('click', () => {
+      document.getElementById('painel-remover-anexo').style.display = 'none';
+    });
+
+    document.getElementById('btn-confirmar-remover-anexo').addEventListener('click', async () => {
+      try {
+        await SGDE.comSessaoValida();
+        const solicitacaoId = document.getElementById('remover-anexo-solicitacao-id').value;
+        const { error } = await supabase.from('solicitacoes_pagamento')
+          .update({ documento_fiscal_id: null }).eq('id_solicitacao', solicitacaoId);
+        if (error) throw error;
+        mostrarSucesso('Anexo removido. Agora é só anexar o documento correto.');
+        document.getElementById('painel-remover-anexo').style.display = 'none';
+        carregarSolicitacoes();
+      } catch (err) { mostrarErro(err.message); }
+    });
 
     document.getElementById('btn-cancelar-anexo').addEventListener('click', () => {
       document.getElementById('painel-anexar-nf').style.display = 'none';
