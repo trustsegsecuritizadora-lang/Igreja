@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SGDE · Usuários</title>
 <link rel="stylesheet" href="css/style.css">
+<style>
+  .painel-senha{border:1px solid var(--border,#DAD2C0);border-radius:10px;padding:14px 16px;margin-top:14px;background:#FBF9F4;max-width:420px}
+  .painel-senha h4{margin:0 0 8px;font-size:.92rem}
+  .painel-senha .acoes{display:flex;gap:8px;margin-top:10px}
+</style>
 </head>
 <body>
   <div class="shell">
@@ -39,9 +44,22 @@
       <div class="card">
         <h2>Usuários cadastrados</h2>
         <table id="tbl-usuarios">
-          <thead><tr><th>Nome</th><th>Login</th><th>Papel</th><th>Status</th></tr></thead>
+          <thead><tr><th>Nome</th><th>Login</th><th>Papel</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody></tbody>
         </table>
+
+        <div class="painel-senha" id="painel-redefinir-senha" style="display:none">
+          <h4>Redefinir senha de <span id="redefinir-senha-nome"></span></h4>
+          <input type="hidden" id="redefinir-senha-usuario-id">
+          <label>Nova senha temporária</label>
+          <input type="text" id="redefinir-senha-valor" placeholder="Mínimo 6 caracteres">
+          <label>Confirmar nova senha</label>
+          <input type="text" id="redefinir-senha-confirmacao">
+          <div class="acoes">
+            <button type="button" class="btn gold" id="btn-confirmar-redefinir-senha">Salvar nova senha</button>
+            <button type="button" class="btn ghost" id="btn-cancelar-redefinir-senha">Cancelar</button>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -59,8 +77,43 @@
           <td>${u.login}</td>
           <td>${u.papel}</td>
           <td><span class="badge ${u.status === 'ativo' ? 'conferido' : 'divergente'}">${u.status}</span></td>
-        </tr>`).join('') || '<tr><td colspan="4">Nenhum usuário.</td></tr>';
+          <td><button class="btn ghost" onclick="abrirRedefinirSenha('${u.id_usuario}', '${u.nome.replace(/'/g, "\\'")}')">Redefinir senha</button></td>
+        </tr>`).join('') || '<tr><td colspan="5">Nenhum usuário.</td></tr>';
     }
+
+    // Senha nunca fica armazenada em texto puro (só hash + salt) — não
+    // existe "ver a senha atual". Isso é redefinir, não recuperar: o
+    // Administrador define uma senha nova (temporária) e repassa pra
+    // pessoa trocar no próximo acesso.
+    window.abrirRedefinirSenha = function (usuarioId, nome) {
+      document.getElementById('redefinir-senha-usuario-id').value = usuarioId;
+      document.getElementById('redefinir-senha-nome').textContent = nome;
+      document.getElementById('redefinir-senha-valor').value = '';
+      document.getElementById('redefinir-senha-confirmacao').value = '';
+      document.getElementById('painel-redefinir-senha').style.display = 'block';
+      document.getElementById('painel-redefinir-senha').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    document.getElementById('btn-cancelar-redefinir-senha').addEventListener('click', () => {
+      document.getElementById('painel-redefinir-senha').style.display = 'none';
+    });
+
+    document.getElementById('btn-confirmar-redefinir-senha').addEventListener('click', async () => {
+      try {
+        SGDE.exigirPapel('Administrador');
+        await SGDE.comSessaoValida();
+        const usuarioId = document.getElementById('redefinir-senha-usuario-id').value;
+        const senha = document.getElementById('redefinir-senha-valor').value;
+        const confirmacao = document.getElementById('redefinir-senha-confirmacao').value;
+        if (senha.length < 6) { mostrarErro('A nova senha deve ter pelo menos 6 caracteres.'); return; }
+        if (senha !== confirmacao) { mostrarErro('As senhas digitadas não coincidem.'); return; }
+        await SGDE.chamarRpc('redefinir_senha_usuario', {
+          p_token: SGDE.getToken(), p_usuario_id: usuarioId, p_nova_senha: senha,
+        });
+        mostrarSucesso('Senha redefinida. Repasse a nova senha temporária para a pessoa trocar no próximo acesso.');
+        document.getElementById('painel-redefinir-senha').style.display = 'none';
+      } catch (err) { mostrarErro(err.message); }
+    });
 
     document.getElementById('form-usuario').addEventListener('submit', async (e) => {
       e.preventDefault();
