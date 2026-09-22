@@ -157,6 +157,18 @@
           <button type="submit" class="gold" style="margin-top:12px">Salvar prestação de contas</button>
         </form>
         <hr style="margin:20px 0;border:none;border-top:1px solid var(--border,#DAD2C0)">
+        <h3 style="font-size:1rem">Aplicações (gastos) datadas</h3>
+        <p class="pedido-meta">"Total aplicado" acima é o resumo manual da prestação de contas pública. Para o gasto entrar no Balancete & Caixa do mês certo, lance aqui também, com data.</p>
+        <div class="total-linha">Total lançado aqui: <span id="total-aplicado-datado">R$ 0,00</span></div>
+        <div class="form-mini">
+          <div><label>Data</label><input type="date" id="aplicacao-data"></div>
+          <div><label>Valor do gasto (R$)</label><input type="number" step="0.01" id="aplicacao-valor"></div>
+          <div><label>Descrição</label><input type="text" id="aplicacao-descricao" placeholder="Ex.: Sinal do imóvel"></div>
+          <button type="button" class="btn gold" id="btn-lancar-aplicacao">Lançar</button>
+        </div>
+        <p class="pedido-meta" style="margin:10px 0">Para corrigir um valor, lance um novo registro (inclusive negativo) — o histórico é append-only e auditado.</p>
+        <div id="lista-aplicacoes" style="margin-top:14px"></div>
+        <hr style="margin:20px 0;border:none;border-top:1px solid var(--border,#DAD2C0)">
         <h3 style="font-size:1rem">Documentos públicos</h3>
         <div class="form-mini">
           <div><label>Nome do documento</label><input type="text" id="doc-nome" placeholder="Ex.: Relatório final"></div>
@@ -241,7 +253,9 @@
       fP.resultados_texto.value = c.resultados_texto || ''; fP.prestacao_contas_publicada.checked = !!c.prestacao_contas_publicada;
 
       document.getElementById('total-confirmado').textContent = formatarMoeda(c.total_arrecadado_confirmado);
+      document.getElementById('aplicacao-data').value = new Date().toISOString().slice(0, 10);
       await carregarLancamentos(id);
+      await carregarAplicacoes(id);
       await carregarDocumentos(id);
       document.getElementById('modal-campanha').classList.add('aberto');
     };
@@ -291,6 +305,39 @@
         document.getElementById('total-confirmado').textContent = formatarMoeda(c?.total_arrecadado_confirmado);
         carregarLancamentos(campanhaAtualId);
         carregarCampanhas();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    async function carregarAplicacoes(campanhaId) {
+      const { data } = await supabase.from('campanha_aplicacoes')
+        .select('valor, descricao, data_aplicacao, criado_em').eq('campanha_id', campanhaId).order('data_aplicacao', { ascending: false });
+      const total = (data || []).reduce((s, r) => s + Number(r.valor), 0);
+      document.getElementById('total-aplicado-datado').textContent = formatarMoeda(total);
+      const el = document.getElementById('lista-aplicacoes');
+      if (!data || data.length === 0) { el.innerHTML = '<p class="pedido-meta">Nenhuma aplicação datada ainda.</p>'; return; }
+      el.innerHTML = data.map(l => `
+        <div class="lancamento-linha">
+          <span>${new Date(l.data_aplicacao + 'T00:00:00').toLocaleDateString('pt-BR')}${l.descricao ? ' · ' + escapeHtml(l.descricao) : ''}</span>
+          <span class="val">${formatarMoeda(l.valor)}</span>
+        </div>`).join('');
+    }
+
+    document.getElementById('btn-lancar-aplicacao').addEventListener('click', async () => {
+      try {
+        await SGDE.comSessaoValida();
+        const valor = parseFloat(document.getElementById('aplicacao-valor').value);
+        if (!valor) { mostrarErro('Informe um valor.'); return; }
+        const data = document.getElementById('aplicacao-data').value;
+        if (!data) { mostrarErro('Informe a data do gasto.'); return; }
+        const descricao = document.getElementById('aplicacao-descricao').value.trim() || null;
+        const { error } = await supabase.from('campanha_aplicacoes').insert({
+          campanha_id: campanhaAtualId, valor, data_aplicacao: data, descricao,
+        });
+        if (error) throw error;
+        document.getElementById('aplicacao-valor').value = '';
+        document.getElementById('aplicacao-descricao').value = '';
+        mostrarSucesso('Aplicação registrada.');
+        carregarAplicacoes(campanhaAtualId);
       } catch (err) { mostrarErro(err.message); }
     });
 

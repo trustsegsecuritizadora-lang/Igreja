@@ -11,6 +11,7 @@
   .campo-periodo label{font-size:.78rem;color:var(--ink-500)}
   .campo-periodo input{margin:0}
   .stat.destaque .value{color:var(--gold-500)}
+  .pedido-meta{font-size:.78rem;color:var(--ink-500,#5B6472);margin:0 0 10px}
   @media(max-width:900px){.grid-5{grid-template-columns:1fr 1fr}}
   @media(min-width:901px){.grid-5{grid-template-columns:repeat(5,1fr)}}
 </style>
@@ -73,6 +74,23 @@
       </div>
 
       <div class="card">
+        <h2>Entradas de campanha do período</h2>
+        <p class="pedido-meta" id="aviso-data-campanha" style="display:none;color:var(--gold-700,#7A5A16)"></p>
+        <table id="tbl-extrato-campanha-entradas">
+          <thead><tr><th>Data</th><th>Campanha</th><th>Doador / observação</th><th>Valor</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Saídas de campanha do período</h2>
+        <table id="tbl-extrato-campanha-saidas">
+          <thead><tr><th>Data</th><th>Campanha</th><th>Descrição</th><th>Valor</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
         <h2 id="titulo-pendentes">Solicitações pendentes de aprovação</h2>
         <table id="tbl-pendentes">
           <thead><tr><th>Fornecedor</th><th>Centro de custo</th><th>Valor</th><th>Vencimento</th><th>Solicitante</th></tr></thead>
@@ -104,6 +122,27 @@
       return (data || []).reduce((s, r) => s + Number(r.valor), 0);
     }
 
+    // As doações lançadas em Campanhas (campanha_lancamentos) não têm uma
+    // data confiável no campo data_lancamento — é a data em que o
+    // administrador digitou o lançamento no sistema, não a data em que o
+    // PIX efetivamente caiu na conta. Mas a observação sempre começa com
+    // a data/hora real do crédito (copiada do extrato/comprovante), ex.:
+    // "24/08/2026 14:45 44985665215 JOSE MARIA DIA". Por isso extraímos a
+    // data de lá; só caímos no data_lancamento quando não dá pra
+    // reconhecer esse padrão no início da observação.
+    function extrairDataObservacao(observacao, dataLancamentoISO) {
+      const m = (observacao || '').match(/^(\d{2})\/(\d{2})\/(\d{4})(?!\d)/);
+      if (m) {
+        const [, dd, mm, yyyy] = m;
+        const iso = `${yyyy}-${mm}-${dd}`;
+        const d = new Date(`${iso}T00:00:00`);
+        if (!isNaN(d.getTime()) && d.getUTCDate() === Number(dd) && (d.getUTCMonth() + 1) === Number(mm)) {
+          return { data: iso, confiavel: true };
+        }
+      }
+      return { data: dataLancamentoISO, confiavel: false };
+    }
+
     async function carregarPeriodo(anoMesStr) {
       document.querySelector('.alert-area').innerHTML = '';
       const { inicioMes, fimMes, label } = limitesDoMes(anoMesStr);
@@ -112,14 +151,6 @@
 
       try {
         await SGDE.comSessaoValida();
-
-        // ── Saldo inicial: tudo o que aconteceu ANTES do início do período ──
-        // (entradas registradas e saídas efetivamente pagas — não o que só
-        // estava com vencimento antes; o que importa pro caixa é a data em
-        // que o dinheiro de fato saiu).
-        const saldoInicial =
-          (await somaValores(supabase.from('lancamentos_entrada').select('valor').lt('criado_em', inicioMes))) -
-          (await somaValores(supabase.from('solicitacoes_pagamento').select('valor').eq('status', 'liquidado').lt('liquidado_em', inicioMes)));
 
         // ── Movimento do período selecionado ──
         const { data: entradas, error: e1 } = await supabase
@@ -149,8 +180,54 @@
           .gte('data_vencimento', inicioMes).lte('data_vencimento', fimMes);
         if (e3) throw e3;
 
-        const totalEntradas = (entradas || []).reduce((s, r) => s + Number(r.valor), 0);
-        const totalSaidas = (saidasLiquidadas || []).reduce((s, r) => s + Number(r.valor), 0);
+        // ── Entradas e saídas de campanha (campanha_lancamentos /
+        // campanha_aplicacoes) — dados lançados manualmente em Campanhas,
+        // fora do fluxo formal de lote/solicitação, mas que são dinheiro
+        // real entrando e saindo do caixa. Buscamos tudo (não só o mês)
+        // porque a data que importa (extraída da observação) pode cair
+        // num mês diferente de quando foi registrado no sistema.
+        const { data: campLancRaw, error: e4 } = await supabase
+          .from('campanha_lancamentos')
+          .select('valor, data_lancamento, observacao, campanhas(titulo)');
+        if (e4) throw e4;
+        const { data: campAplicRaw, error: e5 } = await supabase
+          .from('campanha_aplicacoes')
+          .select('valor, data_aplicacao, descricao, campanhas(titulo)');
+        if (e5) throw e5;
+
+        const campEntradasTodas = (campLancRaw || []).map(r => {
+          const { data, confiavel } = extrairDataObservacao(r.observacao, r.data_lancamento);
+          return { ...r, dataEfetiva: data, dataConfiavel: confiavel };
+        });
+        const campSaidasTodas = (campAplicRaw || []).map(r => ({ ...r, dataEfetiva: r.data_aplicacao }));
+
+        const campEntradasAntes = campEntradasTodas.filter(r => r.dataEfetiva < inicioMes);
+        const campSaidasAntes = campSaidasTodas.filter(r => r.dataEfetiva < inicioMes);
+        const campEntradasPeriodo = campEntradasTodas
+          .filter(r => r.dataEfetiva >= inicioMes && r.dataEfetiva <= fimMes)
+          .sort((a, b) => a.dataEfetiva.localeCompare(b.dataEfetiva));
+        const campSaidasPeriodo = campSaidasTodas
+          .filter(r => r.dataEfetiva >= inicioMes && r.dataEfetiva <= fimMes)
+          .sort((a, b) => a.dataEfetiva.localeCompare(b.dataEfetiva));
+
+        const somaCampo = arr => arr.reduce((s, r) => s + Number(r.valor), 0);
+        const totalCampEntradasAntes = somaCampo(campEntradasAntes);
+        const totalCampSaidasAntes = somaCampo(campSaidasAntes);
+        const totalCampEntradas = somaCampo(campEntradasPeriodo);
+        const totalCampSaidas = somaCampo(campSaidasPeriodo);
+
+        // ── Saldo inicial: tudo o que aconteceu ANTES do início do período ──
+        // (entradas registradas e saídas efetivamente pagas — não o que só
+        // estava com vencimento antes; o que importa pro caixa é a data em
+        // que o dinheiro de fato saiu). Inclui também entradas/saídas de
+        // campanha já datadas antes do período.
+        const saldoInicial =
+          (await somaValores(supabase.from('lancamentos_entrada').select('valor').lt('criado_em', inicioMes))) -
+          (await somaValores(supabase.from('solicitacoes_pagamento').select('valor').eq('status', 'liquidado').lt('liquidado_em', inicioMes))) +
+          totalCampEntradasAntes - totalCampSaidasAntes;
+
+        const totalEntradas = (entradas || []).reduce((s, r) => s + Number(r.valor), 0) + totalCampEntradas;
+        const totalSaidas = (saidasLiquidadas || []).reduce((s, r) => s + Number(r.valor), 0) + totalCampSaidas;
         const saldoMes = totalEntradas - totalSaidas;
         const saldoFinal = saldoInicial + saldoMes;
 
@@ -204,9 +281,35 @@
             <td>${r.usuarios?.nome || '—'}</td>
           </tr>`).join('') || '<tr><td colspan="5">Nenhuma solicitação pendente.</td></tr>';
 
+        document.querySelector('#tbl-extrato-campanha-entradas tbody').innerHTML = campEntradasPeriodo.map(r => `
+          <tr>
+            <td>${new Date(r.dataEfetiva + 'T00:00:00').toLocaleDateString('pt-BR')}${r.dataConfiavel ? '' : ' ⚠'}</td>
+            <td>${r.campanhas?.titulo || '—'}</td>
+            <td>${r.observacao || '—'}</td>
+            <td>${formatarMoeda(r.valor)}</td>
+          </tr>`).join('') || '<tr><td colspan="4">Sem entradas de campanha no período.</td></tr>';
+
+        document.querySelector('#tbl-extrato-campanha-saidas tbody').innerHTML = campSaidasPeriodo.map(r => `
+          <tr>
+            <td>${new Date(r.dataEfetiva + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+            <td>${r.campanhas?.titulo || '—'}</td>
+            <td>${r.descricao || '—'}</td>
+            <td>${formatarMoeda(r.valor)}</td>
+          </tr>`).join('') || '<tr><td colspan="4">Sem saídas de campanha no período.</td></tr>';
+
+        const avisoDatas = document.getElementById('aviso-data-campanha');
+        const qtdSemData = campEntradasPeriodo.filter(r => !r.dataConfiavel).length;
+        if (qtdSemData > 0) {
+          avisoDatas.style.display = 'block';
+          avisoDatas.textContent = `⚠ ${qtdSemData} lançamento(s) sem data identificável no início da observação — usando a data de registro no sistema como aproximação. Confira e corrija a observação em Campanhas para manter a precisão.`;
+        } else {
+          avisoDatas.style.display = 'none';
+        }
+
         dadosPeriodoAtual = {
           anoMesStr, label, saldoInicial, saldoFinal, saldoMes, totalEntradas, totalSaidas,
-          entradas: entradas || [], saidasLiquidadas: saidasLiquidadas || []
+          entradas: entradas || [], saidasLiquidadas: saidasLiquidadas || [],
+          campEntradasPeriodo, campSaidasPeriodo, totalCampEntradas, totalCampSaidas
         };
 
       } catch (err) {
@@ -221,7 +324,10 @@
 
     function exportarCSV() {
       if (!dadosPeriodoAtual) return;
-      const { label, saldoInicial, saldoFinal, saldoMes, totalEntradas, totalSaidas, entradas, saidasLiquidadas, anoMesStr } = dadosPeriodoAtual;
+      const {
+        label, saldoInicial, saldoFinal, saldoMes, totalEntradas, totalSaidas, entradas, saidasLiquidadas, anoMesStr,
+        campEntradasPeriodo, campSaidasPeriodo, totalCampEntradas, totalCampSaidas
+      } = dadosPeriodoAtual;
       const linhas = [];
 
       linhas.push(linhaCSV([`Balancete & Fluxo de Caixa — ${label}`]));
@@ -237,7 +343,20 @@
         r.membros?.nome || '',
         formatarMoeda(r.valor)
       ])));
-      linhas.push(linhaCSV(['', '', '', 'Total entradas', formatarMoeda(totalEntradas)]));
+      linhas.push(linhaCSV(['', '', '', 'Total entradas formais', formatarMoeda(entradas.reduce((s, r) => s + Number(r.valor), 0))]));
+      linhas.push('');
+
+      linhas.push(linhaCSV(['ENTRADAS DE CAMPANHA']));
+      linhas.push(linhaCSV(['Data', 'Campanha', 'Doador / observação', 'Valor']));
+      campEntradasPeriodo.forEach(r => linhas.push(linhaCSV([
+        new Date(r.dataEfetiva + 'T00:00:00').toLocaleDateString('pt-BR') + (r.dataConfiavel ? '' : ' (data aproximada)'),
+        r.campanhas?.titulo || '',
+        r.observacao || '',
+        formatarMoeda(r.valor)
+      ])));
+      linhas.push(linhaCSV(['', '', 'Total entradas de campanha', formatarMoeda(totalCampEntradas)]));
+      linhas.push('');
+      linhas.push(linhaCSV(['', '', '', 'TOTAL ENTRADAS (formais + campanha)', formatarMoeda(totalEntradas)]));
       linhas.push('');
 
       linhas.push(linhaCSV(['SAÍDAS LIQUIDADAS']));
@@ -249,7 +368,20 @@
         r.descricao || '',
         formatarMoeda(r.valor)
       ])));
-      linhas.push(linhaCSV(['', '', '', 'Total saídas', formatarMoeda(totalSaidas)]));
+      linhas.push(linhaCSV(['', '', '', 'Total saídas liquidadas formais', formatarMoeda(saidasLiquidadas.reduce((s, r) => s + Number(r.valor), 0))]));
+      linhas.push('');
+
+      linhas.push(linhaCSV(['SAÍDAS DE CAMPANHA']));
+      linhas.push(linhaCSV(['Data', 'Campanha', 'Descrição', 'Valor']));
+      campSaidasPeriodo.forEach(r => linhas.push(linhaCSV([
+        new Date(r.dataEfetiva + 'T00:00:00').toLocaleDateString('pt-BR'),
+        r.campanhas?.titulo || '',
+        r.descricao || '',
+        formatarMoeda(r.valor)
+      ])));
+      linhas.push(linhaCSV(['', '', 'Total saídas de campanha', formatarMoeda(totalCampSaidas)]));
+      linhas.push('');
+      linhas.push(linhaCSV(['', '', '', 'TOTAL SAÍDAS (formais + campanha)', formatarMoeda(totalSaidas)]));
       linhas.push('');
 
       linhas.push(linhaCSV(['Saldo do mês (entradas − saídas)', formatarMoeda(saldoMes)]));
