@@ -30,6 +30,7 @@
             <label for="sel-periodo">Período</label>
             <input type="month" id="sel-periodo">
           </div>
+          <button type="button" class="btn ghost" id="btn-relatorio">🖨 Gerar relatório</button>
           <button type="button" class="btn gold" id="btn-exportar">⬇ Exportar CSV</button>
         </div>
       </div>
@@ -317,6 +318,179 @@
       }
     }
 
+    function escapeHtml(s) { return (s || '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    // Gera um relatório formatado (não é só os números do CSV) pra
+    // imprimir ou "salvar como PDF" direto do navegador — pensado pra
+    // enviar pro contador sem precisar reformatar nada. Abre numa aba
+    // separada porque o layout de impressão é bem diferente da tela
+    // (sem sidebar/menu, com cabeçalho/rodapé próprios) e assim não mexe
+    // no CSS da tela normal do Balancete.
+    function gerarRelatorio() {
+      if (!dadosPeriodoAtual) return;
+      try {
+      const {
+        label, saldoInicial, saldoFinal, saldoMes, totalEntradas, totalSaidas, entradas, saidasLiquidadas,
+        campEntradasPeriodo, campSaidasPeriodo, totalCampEntradas, totalCampSaidas
+      } = dadosPeriodoAtual;
+
+      const porTipoEntrada = {};
+      entradas.forEach(r => { porTipoEntrada[r.tipo_entrada] = (porTipoEntrada[r.tipo_entrada] || 0) + Number(r.valor); });
+      const porCentroSaida = {};
+      saidasLiquidadas.forEach(r => {
+        const nome = r.centros_custo?.nome || '—';
+        porCentroSaida[nome] = (porCentroSaida[nome] || 0) + Number(r.valor);
+      });
+
+      const linhaTabela = (cols) => `<tr>${cols.map(c => `<td>${c}</td>`).join('')}</tr>`;
+
+      const tabelaResumo = (titulo, linhas, colspanVazio) => `
+        <h3>${titulo}</h3>
+        <table>${linhas.length ? linhas.join('') : `<tr><td colspan="${colspanVazio}" class="vazio">Sem lançamentos no período.</td></tr>`}</table>`;
+
+      const linhasEntradas = entradas.map(r => linhaTabela([
+        new Date(r.criado_em).toLocaleDateString('pt-BR'),
+        escapeHtml((r.tipo_entrada || '').replace(/_/g, ' ')),
+        escapeHtml(r.forma_recebimento || '—'),
+        escapeHtml(r.membros?.nome || '—'),
+        formatarMoeda(r.valor),
+      ]));
+      const linhasSaidas = saidasLiquidadas.map(r => linhaTabela([
+        r.liquidado_em ? new Date(r.liquidado_em).toLocaleDateString('pt-BR') : '—',
+        escapeHtml(r.fornecedores?.razao_social || '—'),
+        escapeHtml(r.centros_custo?.nome || '—'),
+        escapeHtml(r.descricao || '—'),
+        formatarMoeda(r.valor),
+      ]));
+      const linhasCampEntradas = campEntradasPeriodo.map(r => linhaTabela([
+        new Date(r.dataEfetiva + 'T00:00:00').toLocaleDateString('pt-BR') + (r.dataConfiavel ? '' : ' *'),
+        escapeHtml(r.campanhas?.titulo || '—'),
+        escapeHtml(r.observacao || '—'),
+        formatarMoeda(r.valor),
+      ]));
+      const linhasCampSaidas = campSaidasPeriodo.map(r => linhaTabela([
+        new Date(r.dataEfetiva + 'T00:00:00').toLocaleDateString('pt-BR'),
+        escapeHtml(r.campanhas?.titulo || '—'),
+        escapeHtml(r.descricao || '—'),
+        formatarMoeda(r.valor),
+      ]));
+
+      const agora = new Date();
+      const geradoEm = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const preparadoPor = escapeHtml(SGDE.getSessao()?.nome || '—');
+
+      const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Balancete ${escapeHtml(label)} — Igreja Salvador do Sétimo Dia</title>
+<style>
+  :root{ --ink:#1F2430; --ink-500:#5B6472; --border:#DAD2C0; --gold:#B8860B; }
+  *{ box-sizing:border-box; }
+  body{ font-family:Georgia,'Times New Roman',serif; color:var(--ink); margin:0; padding:32px 40px; font-size:13px; line-height:1.45; }
+  header{ display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid var(--ink); padding-bottom:12px; margin-bottom:18px; }
+  header h1{ font-size:1.5rem; margin:0 0 4px; }
+  header .subtitulo{ font-size:.95rem; color:var(--ink-500); }
+  header .periodo{ text-align:right; font-size:.85rem; color:var(--ink-500); }
+  header .periodo strong{ display:block; font-size:1.1rem; color:var(--ink); font-family:Arial,sans-serif; }
+  .resumo{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:24px; }
+  .resumo .item{ border:1px solid var(--border); border-radius:6px; padding:8px 10px; }
+  .resumo .item .label{ font-size:.72rem; color:var(--ink-500); text-transform:uppercase; letter-spacing:.03em; }
+  .resumo .item .valor{ font-family:Arial,sans-serif; font-size:1.05rem; font-variant-numeric:tabular-nums; margin-top:2px; }
+  .resumo .destaque{ background:#FBF6E8; border-color:var(--gold); }
+  section{ margin-bottom:22px; break-inside:avoid; }
+  h2{ font-size:1.05rem; border-bottom:1px solid var(--border); padding-bottom:4px; margin:0 0 10px; }
+  h3{ font-size:.88rem; color:var(--ink-500); margin:14px 0 6px; font-family:Arial,sans-serif; text-transform:uppercase; letter-spacing:.03em; }
+  table{ width:100%; border-collapse:collapse; font-family:Arial,sans-serif; font-size:.82rem; }
+  th, td{ text-align:left; padding:5px 8px; border-bottom:1px solid #EDE7D8; }
+  th{ font-weight:600; background:#FAF8F2; }
+  td:last-child, th:last-child{ text-align:right; font-variant-numeric:tabular-nums; }
+  tr.total td{ font-weight:700; border-top:1px solid var(--ink); border-bottom:none; }
+  .vazio{ color:var(--ink-500); font-style:italic; text-align:left !important; }
+  footer{ margin-top:30px; padding-top:10px; border-top:1px solid var(--border); font-size:.72rem; color:var(--ink-500); display:flex; justify-content:space-between; }
+  .barra-acoes{ margin-bottom:20px; }
+  .barra-acoes button{ font:inherit; padding:8px 16px; border-radius:6px; border:1px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+  @media print{ .barra-acoes{ display:none; } body{ padding:0 8mm; } section{ break-inside:avoid; } }
+</style>
+</head>
+<body>
+  <div class="barra-acoes"><button onclick="window.print()">Imprimir / salvar como PDF</button></div>
+  <header>
+    <div>
+      <h1>Igreja Salvador do Sétimo Dia</h1>
+      <div class="subtitulo">Balancete Mensal &amp; Fluxo de Caixa</div>
+    </div>
+    <div class="periodo">
+      <strong>${escapeHtml(label)}</strong>
+      Gerado em ${geradoEm}<br>Preparado por ${preparadoPor}
+    </div>
+  </header>
+
+  <div class="resumo">
+    <div class="item"><div class="label">Saldo inicial</div><div class="valor">${formatarMoeda(saldoInicial)}</div></div>
+    <div class="item"><div class="label">Entradas no mês</div><div class="valor">${formatarMoeda(totalEntradas)}</div></div>
+    <div class="item"><div class="label">Saídas liquidadas</div><div class="valor">${formatarMoeda(totalSaidas)}</div></div>
+    <div class="item"><div class="label">Saldo do mês</div><div class="valor">${formatarMoeda(saldoMes)}</div></div>
+    <div class="item destaque"><div class="label">Saldo final</div><div class="valor">${formatarMoeda(saldoFinal)}</div></div>
+  </div>
+
+  <section>
+    <h2>Entradas — ${formatarMoeda(totalEntradas)}</h2>
+    ${tabelaResumo('Formais', [
+      `<tr><th>Data</th><th>Tipo</th><th>Forma</th><th>Membro</th><th>Valor</th></tr>`,
+      ...linhasEntradas,
+      `<tr class="total"><td colspan="4">Total entradas formais</td><td>${formatarMoeda(entradas.reduce((s, r) => s + Number(r.valor), 0))}</td></tr>`,
+    ], 5)}
+    ${tabelaResumo('De campanha', [
+      `<tr><th>Data</th><th>Campanha</th><th>Doador / observação</th><th>Valor</th></tr>`,
+      ...linhasCampEntradas,
+      `<tr class="total"><td colspan="3">Total entradas de campanha</td><td>${formatarMoeda(totalCampEntradas)}</td></tr>`,
+    ], 4)}
+  </section>
+
+  <section>
+    <h2>Saídas — ${formatarMoeda(totalSaidas)}</h2>
+    ${tabelaResumo('Liquidadas', [
+      `<tr><th>Data de pagamento</th><th>Fornecedor</th><th>Centro de custo</th><th>Descrição</th><th>Valor</th></tr>`,
+      ...linhasSaidas,
+      `<tr class="total"><td colspan="4">Total saídas liquidadas</td><td>${formatarMoeda(saidasLiquidadas.reduce((s, r) => s + Number(r.valor), 0))}</td></tr>`,
+    ], 5)}
+    ${tabelaResumo('De campanha', [
+      `<tr><th>Data</th><th>Campanha</th><th>Descrição</th><th>Valor</th></tr>`,
+      ...linhasCampSaidas,
+      `<tr class="total"><td colspan="3">Total saídas de campanha</td><td>${formatarMoeda(totalCampSaidas)}</td></tr>`,
+    ], 4)}
+  </section>
+
+  <section>
+    <h2>Resumo por categoria</h2>
+    <h3>Entradas por tipo</h3>
+    <table>
+      <tr><th>Tipo</th><th>Valor</th></tr>
+      ${Object.entries(porTipoEntrada).map(([tipo, valor]) => linhaTabela([escapeHtml((tipo || '—').replace(/_/g, ' ')), formatarMoeda(valor)])).join('') || '<tr><td colspan="2" class="vazio">Sem entradas no período.</td></tr>'}
+    </table>
+    <h3>Saídas por centro de custo</h3>
+    <table>
+      <tr><th>Centro de custo</th><th>Valor</th></tr>
+      ${Object.entries(porCentroSaida).map(([nome, valor]) => linhaTabela([escapeHtml(nome), formatarMoeda(valor)])).join('') || '<tr><td colspan="2" class="vazio">Sem saídas liquidadas no período.</td></tr>'}
+    </table>
+  </section>
+
+  <footer>
+    <span>Documento gerado automaticamente pelo SGDE — Igreja Salvador do Sétimo Dia.</span>
+    <span>Saldo final do período: ${formatarMoeda(saldoFinal)}</span>
+  </footer>
+</body>
+</html>`;
+
+      const aba = window.open('', '_blank');
+      if (!aba) { mostrarErro('O navegador bloqueou a abertura da aba do relatório — permita pop-ups para este site.'); return; }
+      aba.document.open();
+      aba.document.write(html);
+      aba.document.close();
+      } catch (err) { mostrarErro(err.message || 'Erro ao gerar o relatório.'); }
+    }
+
     function campoCSV(valor) {
       return `"${String(valor ?? '').replace(/"/g, '""')}"`;
     }
@@ -413,6 +587,7 @@
         if (inputPeriodo.value) carregarPeriodo(inputPeriodo.value);
       });
       document.getElementById('btn-exportar').addEventListener('click', exportarCSV);
+      document.getElementById('btn-relatorio').addEventListener('click', gerarRelatorio);
 
       carregarPeriodo(anoMesAtual);
     })();

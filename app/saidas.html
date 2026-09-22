@@ -140,6 +140,18 @@
             <button type="button" class="btn ghost" id="btn-cancelar-remover-anexo">Cancelar</button>
           </div>
         </div>
+
+        <div class="painel-anexo" id="painel-liquidar" style="display:none">
+          <h4 id="titulo-painel-liquidar">Liquidar solicitação</h4>
+          <input type="hidden" id="liquidar-solicitacao-id">
+          <label>Data em que o pagamento foi feito</label>
+          <input type="date" id="liquidar-data">
+          <p style="margin-top:8px">Essa data é o que decide em qual mês a saída aparece no Balancete — confira antes de confirmar, principalmente se estiver lançando com atraso.</p>
+          <div class="acoes">
+            <button type="button" class="btn gold" id="btn-confirmar-liquidar">Confirmar</button>
+            <button type="button" class="btn ghost" id="btn-cancelar-liquidar">Cancelar</button>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -389,7 +401,7 @@
       // fazia a consulta inteira falhar e a tabela ficar vazia (nenhuma
       // solicitação aparecia, nem as já aprovadas).
       const { data: rows, error } = await supabase.from('solicitacoes_pagamento')
-        .select('id_solicitacao, valor, data_vencimento, status, solicitante_id, documento_fiscal_id, fornecedores(razao_social), centros_custo(nome), documentos_fiscais!fk_solicitacoes_documento_fiscal(arquivo_url)')
+        .select('id_solicitacao, valor, data_vencimento, status, solicitante_id, documento_fiscal_id, liquidado_em, fornecedores(razao_social), centros_custo(nome), documentos_fiscais!fk_solicitacoes_documento_fiscal(arquivo_url)')
         .order('criado_em', { ascending: false }).limit(30);
       if (error) { mostrarErro(error.message); return; }
 
@@ -411,7 +423,10 @@
           }
         }
         if (r.status === 'aprovado' && r.documento_fiscal_id) {
-          acoes += `<button class="gold" onclick="liquidar('${r.id_solicitacao}')">Liquidar</button>`;
+          acoes += `<button class="gold" onclick="abrirLiquidar('${r.id_solicitacao}')">Liquidar</button>`;
+        }
+        if (r.status === 'liquidado') {
+          acoes += `<button class="btn ghost" onclick="abrirLiquidar('${r.id_solicitacao}', '${r.liquidado_em || ''}')">Editar data de pagamento</button>`;
         }
         return `<tr>
           <td>${r.fornecedores?.razao_social || '—'}</td>
@@ -526,14 +541,57 @@
       } catch (err) { mostrarErro(err.message); }
     };
 
-    window.liquidar = async function (id) {
+    // Data local de "hoje" em YYYY-MM-DD sem passar por UTC (evita o
+    // clássico bug de virar o dia errado perto da meia-noite, já que
+    // toISOString() sozinho usa UTC).
+    function hojeLocalISO() {
+      const d = new Date();
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    }
+
+    // Mesmo painel serve pra liquidar (1ª vez) e pra corrigir a data de
+    // uma solicitação já liquidada — foi isso que causou o problema de
+    // saídas de agosto aparecendo no Balancete de setembro: liquidar não
+    // deixava escolher a data, então ficava sempre "hoje".
+    window.abrirLiquidar = function (id, liquidadoEmAtual) {
+      const editando = !!liquidadoEmAtual;
+      document.getElementById('liquidar-solicitacao-id').value = id;
+      document.getElementById('painel-liquidar').dataset.modo = editando ? 'editar' : 'novo';
+      document.getElementById('liquidar-data').value = editando
+        ? new Date(liquidadoEmAtual).toISOString().slice(0, 10)
+        : hojeLocalISO();
+      document.getElementById('titulo-painel-liquidar').textContent = editando ? 'Editar data de pagamento' : 'Liquidar solicitação';
+      document.getElementById('btn-confirmar-liquidar').textContent = editando ? 'Salvar data' : 'Confirmar liquidação';
+      const painel = document.getElementById('painel-liquidar');
+      painel.style.display = 'block';
+      painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    document.getElementById('btn-cancelar-liquidar').addEventListener('click', () => {
+      document.getElementById('painel-liquidar').style.display = 'none';
+    });
+
+    document.getElementById('btn-confirmar-liquidar').addEventListener('click', async () => {
       try {
         await SGDE.comSessaoValida();
-        const { error } = await supabase.from('solicitacoes_pagamento').update({ status: 'liquidado' }).eq('id_solicitacao', id);
+        const painel = document.getElementById('painel-liquidar');
+        const id = document.getElementById('liquidar-solicitacao-id').value;
+        const dataStr = document.getElementById('liquidar-data').value;
+        if (!dataStr) { mostrarErro('Informe a data do pagamento.'); return; }
+        // T12:00:00 (meio-dia, sem timezone explícito) em vez de meia-noite:
+        // evita que o fuso de Brasília (UTC-3) jogue a data pro dia anterior
+        // quando isso for lido de volta como UTC.
+        const editando = painel.dataset.modo === 'editar';
+        const payload = editando
+          ? { liquidado_em: dataStr + 'T12:00:00' }
+          : { status: 'liquidado', liquidado_em: dataStr + 'T12:00:00' };
+        const { error } = await supabase.from('solicitacoes_pagamento').update(payload).eq('id_solicitacao', id);
         if (error) throw error;
-        mostrarSucesso('Solicitação liquidada.'); carregarSolicitacoes();
+        mostrarSucesso(editando ? 'Data de pagamento atualizada.' : 'Solicitação liquidada.');
+        painel.style.display = 'none';
+        carregarSolicitacoes();
       } catch (err) { mostrarErro(err.message); }
-    };
+    });
 
     async function enviarSolicitacao() {
       try {
