@@ -372,9 +372,16 @@
     });
 
     async function carregarSolicitacoes() {
-      const { data: rows } = await supabase.from('solicitacoes_pagamento')
-        .select('id_solicitacao, valor, data_vencimento, status, solicitante_id, documento_fiscal_id, fornecedores(razao_social), centros_custo(nome), documentos_fiscais(arquivo_url)')
+      // Hint "!fk_solicitacoes_documento_fiscal" é obrigatório aqui: existem
+      // DUAS FKs entre solicitacoes_pagamento e documentos_fiscais
+      // (documento_fiscal_id numa direção, solicitacao_id na outra), e sem
+      // o hint o PostgREST rejeita o embed inteiro por ambiguidade — o que
+      // fazia a consulta inteira falhar e a tabela ficar vazia (nenhuma
+      // solicitação aparecia, nem as já aprovadas).
+      const { data: rows, error } = await supabase.from('solicitacoes_pagamento')
+        .select('id_solicitacao, valor, data_vencimento, status, solicitante_id, documento_fiscal_id, fornecedores(razao_social), centros_custo(nome), documentos_fiscais!fk_solicitacoes_documento_fiscal(arquivo_url)')
         .order('criado_em', { ascending: false }).limit(30);
+      if (error) { mostrarErro(error.message); return; }
 
       const linhas = (rows || []).map(r => {
         let acoes = '';
