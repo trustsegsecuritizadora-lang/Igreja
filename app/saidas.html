@@ -6,7 +6,7 @@
 <title>SGDE · Saídas</title>
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .campo-fornecedor{position:relative}
+  .campo-busca{position:relative}
   .autocomplete-lista{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border,#DAD2C0);border-radius:8px;margin-top:4px;max-height:220px;overflow:auto;z-index:20;box-shadow:0 6px 18px rgba(15,27,45,.12);display:none}
   .autocomplete-lista.aberta{display:block}
   .autocomplete-item{padding:9px 12px;cursor:pointer;font-size:.88rem;display:flex;justify-content:space-between;gap:8px}
@@ -29,13 +29,18 @@
         <h2>Nova solicitação de pagamento</h2>
         <form id="form-solicitacao">
           <div class="grid grid-4">
-            <div class="campo-fornecedor">
+            <div class="campo-busca">
               <label>Fornecedor</label>
               <input type="text" id="fornecedor-nome" placeholder="Digite o nome…" autocomplete="off" required>
               <input type="hidden" id="fornecedor-id">
               <div class="autocomplete-lista" id="fornecedor-sugestoes"></div>
             </div>
-            <div><label>Centro de custo</label><select name="centro_custo_id" id="sel-centro" required></select></div>
+            <div class="campo-busca">
+              <label>Centro de custo</label>
+              <input type="text" id="centro-nome" placeholder="Digite o nome…" autocomplete="off" required>
+              <input type="hidden" id="centro-id">
+              <div class="autocomplete-lista" id="centro-sugestoes"></div>
+            </div>
             <div><label>Valor</label><input type="number" step="0.01" min="0.01" name="valor" required></div>
             <div><label>Vencimento</label><input type="date" name="data_vencimento" required></div>
           </div>
@@ -71,6 +76,28 @@
             </div>
           </div>
 
+          <div class="painel-fornecedor" id="painel-centro-parecido" style="display:none">
+            <h4>Já existe um centro de custo parecido</h4>
+            <p id="texto-centro-parecido"></p>
+            <div class="acoes">
+              <button type="button" class="btn gold" id="btn-usar-parecido-centro">É o mesmo, usar este</button>
+              <button type="button" class="btn ghost" id="btn-e-outro-centro">Não, é outro centro de custo</button>
+            </div>
+          </div>
+
+          <div class="painel-fornecedor" id="painel-centro-novo" style="display:none">
+            <h4>Cadastrar novo centro de custo</h4>
+            <p>Não encontramos nenhum cadastro parecido com esse nome. Preencha para cadastrar e seguir com a solicitação.</p>
+            <div class="grid grid-3">
+              <div><label>Nome</label><input type="text" id="novo-centro-nome"></div>
+              <div><label>Orçamento anual (R$, opcional)</label><input type="number" step="0.01" id="novo-centro-orcamento"></div>
+            </div>
+            <div class="acoes">
+              <button type="button" class="btn gold" id="btn-cadastrar-centro">Cadastrar e continuar</button>
+              <button type="button" class="btn ghost" id="btn-cancelar-centro">Cancelar</button>
+            </div>
+          </div>
+
           <button type="submit" class="gold" style="margin-top:16px">Solicitar</button>
         </form>
       </div>
@@ -93,13 +120,14 @@
     let fornecedoresCache = [];
     const ROTULOS_CATEGORIA = { Fornecedor: 'Fornecedor', Prestador_Servico: 'Prestador de serviço', Pastor_Prebenda: 'Pastor (prebenda)' };
 
+    let centrosCache = [];
+
     async function carregarSelects() {
       const { data: fornecedores } = await supabase.from('fornecedores').select('id_fornecedor, razao_social, categoria').eq('ativo', true).order('razao_social');
       fornecedoresCache = fornecedores || [];
 
-      const { data: centros } = await supabase.from('centros_custo').select('id_centro, nome').eq('ativo', true).order('nome');
-      document.getElementById('sel-centro').innerHTML = (centros || [])
-        .map(c => `<option value="${c.id_centro}">${c.nome}</option>`).join('') || '<option value="">Cadastre um centro de custo</option>';
+      const { data: centros } = await supabase.from('centros_custo').select('id_centro, nome, orcamento_anual').eq('ativo', true).order('nome');
+      centrosCache = centros || [];
     }
 
     // ── Busca de fornecedor com detecção de "parecido" ──────────────────
@@ -137,6 +165,14 @@
         .filter(f => f.sim >= limite)
         .sort((a, b) => b.sim - a.sim);
     }
+    function centrosParecidos(nomeDigitado, limite = 0.72) {
+      const nd = normalizarTexto(nomeDigitado);
+      if (!nd) return [];
+      return centrosCache
+        .map(c => ({ ...c, sim: similaridade(nomeDigitado, c.nome) }))
+        .filter(c => c.sim >= limite)
+        .sort((a, b) => b.sim - a.sim);
+    }
 
     const inputNome = document.getElementById('fornecedor-nome');
     const inputId = document.getElementById('fornecedor-id');
@@ -171,13 +207,11 @@
         });
       });
     });
-    document.addEventListener('click', (e) => { if (!e.target.closest('.campo-fornecedor')) fecharSugestoes(); });
-
     document.getElementById('btn-usar-parecido').addEventListener('click', () => {
       const id = document.getElementById('painel-fornecedor-parecido').dataset.candidatoId;
       const f = fornecedoresCache.find(x => x.id_fornecedor === id);
       if (f) selecionarFornecedor(f);
-      enviarSolicitacao();
+      tentarEnviar();
     });
 
     document.getElementById('btn-e-outro').addEventListener('click', () => {
@@ -212,7 +246,87 @@
         fornecedoresCache.push(data);
         mostrarSucesso('Fornecedor cadastrado.');
         selecionarFornecedor(data);
-        enviarSolicitacao();
+        tentarEnviar();
+      } catch (err) { mostrarErro(err.message); }
+    });
+
+    // ── Mesma lógica para centro de custo (campo até então sem nenhuma
+    // forma de cadastro na interface) ────────────────────────────────
+    const inputCentroNome = document.getElementById('centro-nome');
+    const inputCentroId = document.getElementById('centro-id');
+    const listaCentroSugestoes = document.getElementById('centro-sugestoes');
+
+    function fecharSugestoesCentro() { listaCentroSugestoes.classList.remove('aberta'); listaCentroSugestoes.innerHTML = ''; }
+
+    function selecionarCentro(c) {
+      inputCentroId.value = c.id_centro;
+      inputCentroNome.value = c.nome;
+      fecharSugestoesCentro();
+      document.getElementById('painel-centro-parecido').style.display = 'none';
+      document.getElementById('painel-centro-novo').style.display = 'none';
+    }
+
+    inputCentroNome.addEventListener('input', () => {
+      inputCentroId.value = '';
+      document.getElementById('painel-centro-parecido').style.display = 'none';
+      document.getElementById('painel-centro-novo').style.display = 'none';
+      const parecidos = centrosParecidos(inputCentroNome.value, 0.35).slice(0, 8);
+      if (!inputCentroNome.value.trim() || parecidos.length === 0) { fecharSugestoesCentro(); return; }
+      listaCentroSugestoes.innerHTML = parecidos.map(c => `
+        <div class="autocomplete-item" data-id="${c.id_centro}"><span>${c.nome}</span></div>`).join('');
+      listaCentroSugestoes.classList.add('aberta');
+      listaCentroSugestoes.querySelectorAll('.autocomplete-item').forEach(el => {
+        el.addEventListener('mousedown', (ev) => {
+          ev.preventDefault();
+          const c = centrosCache.find(x => x.id_centro === el.dataset.id);
+          if (c) selecionarCentro(c);
+        });
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#fornecedor-nome') && !e.target.closest('#fornecedor-sugestoes')) fecharSugestoes();
+      if (!e.target.closest('#centro-nome') && !e.target.closest('#centro-sugestoes')) fecharSugestoesCentro();
+    });
+
+    document.getElementById('btn-usar-parecido-centro').addEventListener('click', () => {
+      const id = document.getElementById('painel-centro-parecido').dataset.candidatoId;
+      const c = centrosCache.find(x => x.id_centro === id);
+      if (c) selecionarCentro(c);
+      tentarEnviar();
+    });
+
+    document.getElementById('btn-e-outro-centro').addEventListener('click', () => {
+      document.getElementById('painel-centro-parecido').style.display = 'none';
+      abrirPainelNovoCentro();
+    });
+
+    document.getElementById('btn-cancelar-centro').addEventListener('click', () => {
+      document.getElementById('painel-centro-novo').style.display = 'none';
+    });
+
+    function abrirPainelNovoCentro() {
+      document.getElementById('novo-centro-nome').value = inputCentroNome.value.trim();
+      document.getElementById('novo-centro-orcamento').value = '';
+      document.getElementById('painel-centro-novo').style.display = 'block';
+    }
+
+    document.getElementById('btn-cadastrar-centro').addEventListener('click', async () => {
+      try {
+        await SGDE.comSessaoValida();
+        const nome = document.getElementById('novo-centro-nome').value.trim();
+        const orcamentoStr = document.getElementById('novo-centro-orcamento').value;
+        if (!nome) { mostrarErro('Informe o nome do centro de custo.'); return; }
+        const { data, error } = await supabase.from('centros_custo')
+          .insert({ nome, orcamento_anual: orcamentoStr ? parseFloat(orcamentoStr) : null }).select().single();
+        if (error) {
+          if (error.code === '23505') { mostrarErro('Já existe um centro de custo cadastrado com esse nome — confira na lista antes de tentar de novo.'); return; }
+          throw error;
+        }
+        centrosCache.push(data);
+        mostrarSucesso('Centro de custo cadastrado.');
+        selecionarCentro(data);
+        tentarEnviar();
       } catch (err) { mostrarErro(err.message); }
     });
 
@@ -297,7 +411,7 @@
         const form = document.getElementById('form-solicitacao');
         const fd = new FormData(form);
         const { error } = await supabase.from('solicitacoes_pagamento').insert({
-          fornecedor_id: inputId.value, centro_custo_id: fd.get('centro_custo_id'),
+          fornecedor_id: inputId.value, centro_custo_id: inputCentroId.value,
           valor: fd.get('valor'), data_vencimento: fd.get('data_vencimento'),
           descricao: fd.get('descricao'), solicitante_id: sessao.usuario_id,
         });
@@ -305,37 +419,64 @@
         mostrarSucesso('Solicitação criada.');
         form.reset();
         inputId.value = '';
+        inputCentroId.value = '';
         document.getElementById('painel-fornecedor-parecido').style.display = 'none';
         document.getElementById('painel-fornecedor-novo').style.display = 'none';
+        document.getElementById('painel-centro-parecido').style.display = 'none';
+        document.getElementById('painel-centro-novo').style.display = 'none';
         carregarSolicitacoes();
       } catch (err) { mostrarErro(err.message); }
     }
 
-    document.getElementById('form-solicitacao').addEventListener('submit', (e) => {
-      e.preventDefault();
+    // Resolve fornecedor e centro de custo em sequência (cada um pode
+    // parar pra confirmar "é o mesmo parecido?" ou pra cadastrar novo) e
+    // só então envia a solicitação. Toda ação de resolução (usar
+    // parecido, cadastrar novo) chama de novo esta função — ela retoma
+    // de onde parou.
+    function tentarEnviar() {
       if (!inputNome.value.trim()) { mostrarErro('Informe o fornecedor.'); return; }
+      if (!inputCentroNome.value.trim()) { mostrarErro('Informe o centro de custo.'); return; }
 
-      // Já tem um fornecedor confirmado (escolhido na lista ou recém-
-      // cadastrado) e o texto não foi alterado depois — segue direto.
-      if (inputId.value) { enviarSolicitacao(); return; }
-
-      // Texto livre, sem seleção confirmada: procura algo parecido já
-      // cadastrado antes de deixar criar um novo (evita duplicidade tipo
-      // "Estofador" / "Extofador").
-      const parecidos = fornecedoresParecidos(inputNome.value, 0.72);
-      if (parecidos.length > 0) {
-        const top = parecidos[0];
-        const painel = document.getElementById('painel-fornecedor-parecido');
-        painel.dataset.candidatoId = top.id_fornecedor;
-        document.getElementById('texto-fornecedor-parecido').textContent =
-          `Você digitou "${inputNome.value.trim()}". Já existe "${top.razao_social}" (${ROTULOS_CATEGORIA[top.categoria] || ''}) cadastrado — é o mesmo fornecedor?`;
-        painel.style.display = 'block';
-        document.getElementById('painel-fornecedor-novo').style.display = 'none';
-        painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (!inputId.value) {
+        const parecidos = fornecedoresParecidos(inputNome.value, 0.72);
+        if (parecidos.length > 0) {
+          const top = parecidos[0];
+          const painel = document.getElementById('painel-fornecedor-parecido');
+          painel.dataset.candidatoId = top.id_fornecedor;
+          document.getElementById('texto-fornecedor-parecido').textContent =
+            `Você digitou "${inputNome.value.trim()}". Já existe "${top.razao_social}" (${ROTULOS_CATEGORIA[top.categoria] || ''}) cadastrado — é o mesmo fornecedor?`;
+          painel.style.display = 'block';
+          document.getElementById('painel-fornecedor-novo').style.display = 'none';
+          painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          abrirPainelNovoFornecedor();
+        }
         return;
       }
 
-      abrirPainelNovoFornecedor();
+      if (!inputCentroId.value) {
+        const parecidos = centrosParecidos(inputCentroNome.value, 0.72);
+        if (parecidos.length > 0) {
+          const top = parecidos[0];
+          const painel = document.getElementById('painel-centro-parecido');
+          painel.dataset.candidatoId = top.id_centro;
+          document.getElementById('texto-centro-parecido').textContent =
+            `Você digitou "${inputCentroNome.value.trim()}". Já existe "${top.nome}" cadastrado — é o mesmo centro de custo?`;
+          painel.style.display = 'block';
+          document.getElementById('painel-centro-novo').style.display = 'none';
+          painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          abrirPainelNovoCentro();
+        }
+        return;
+      }
+
+      enviarSolicitacao();
+    }
+
+    document.getElementById('form-solicitacao').addEventListener('submit', (e) => {
+      e.preventDefault();
+      tentarEnviar();
     });
 
     (async function init() {
