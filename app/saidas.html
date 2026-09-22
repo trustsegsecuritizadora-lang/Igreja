@@ -188,13 +188,18 @@
       document.getElementById('painel-fornecedor-novo').style.display = 'none';
     }
 
-    inputNome.addEventListener('input', () => {
-      inputId.value = ''; // qualquer edição no texto invalida a seleção anterior
-      document.getElementById('painel-fornecedor-parecido').style.display = 'none';
-      document.getElementById('painel-fornecedor-novo').style.display = 'none';
-      const parecidos = fornecedoresParecidos(inputNome.value, 0.35).slice(0, 8);
-      if (!inputNome.value.trim() || parecidos.length === 0) { fecharSugestoes(); return; }
-      listaSugestoes.innerHTML = parecidos.map(f => `
+    // Mostra sugestões tanto ao digitar (busca por semelhança) quanto ao
+    // simplesmente clicar/focar o campo vazio (lista tudo, como uma caixa
+    // de seleção normal) — assim o campo funciona nos dois jeitos: quem
+    // quer digitar direto, digita; quem quer escolher de uma lista, clica
+    // e escolhe.
+    function atualizarSugestoesFornecedor() {
+      const texto = inputNome.value.trim();
+      const lista = texto
+        ? fornecedoresParecidos(texto, 0.35).slice(0, 8)
+        : [...fornecedoresCache].sort((a, b) => a.razao_social.localeCompare(b.razao_social));
+      if (lista.length === 0) { fecharSugestoes(); return; }
+      listaSugestoes.innerHTML = lista.map(f => `
         <div class="autocomplete-item" data-id="${f.id_fornecedor}">
           <span>${f.razao_social}</span><span class="cat">${ROTULOS_CATEGORIA[f.categoria] || ''}</span>
         </div>`).join('');
@@ -206,7 +211,14 @@
           if (f) selecionarFornecedor(f);
         });
       });
+    }
+    inputNome.addEventListener('input', () => {
+      inputId.value = ''; // qualquer edição no texto invalida a seleção anterior
+      document.getElementById('painel-fornecedor-parecido').style.display = 'none';
+      document.getElementById('painel-fornecedor-novo').style.display = 'none';
+      atualizarSugestoesFornecedor();
     });
+    inputNome.addEventListener('focus', atualizarSugestoesFornecedor);
     document.getElementById('btn-usar-parecido').addEventListener('click', () => {
       const id = document.getElementById('painel-fornecedor-parecido').dataset.candidatoId;
       const f = fornecedoresCache.find(x => x.id_fornecedor === id);
@@ -266,13 +278,13 @@
       document.getElementById('painel-centro-novo').style.display = 'none';
     }
 
-    inputCentroNome.addEventListener('input', () => {
-      inputCentroId.value = '';
-      document.getElementById('painel-centro-parecido').style.display = 'none';
-      document.getElementById('painel-centro-novo').style.display = 'none';
-      const parecidos = centrosParecidos(inputCentroNome.value, 0.35).slice(0, 8);
-      if (!inputCentroNome.value.trim() || parecidos.length === 0) { fecharSugestoesCentro(); return; }
-      listaCentroSugestoes.innerHTML = parecidos.map(c => `
+    function atualizarSugestoesCentro() {
+      const texto = inputCentroNome.value.trim();
+      const lista = texto
+        ? centrosParecidos(texto, 0.35).slice(0, 8)
+        : [...centrosCache].sort((a, b) => a.nome.localeCompare(b.nome));
+      if (lista.length === 0) { fecharSugestoesCentro(); return; }
+      listaCentroSugestoes.innerHTML = lista.map(c => `
         <div class="autocomplete-item" data-id="${c.id_centro}"><span>${c.nome}</span></div>`).join('');
       listaCentroSugestoes.classList.add('aberta');
       listaCentroSugestoes.querySelectorAll('.autocomplete-item').forEach(el => {
@@ -282,7 +294,14 @@
           if (c) selecionarCentro(c);
         });
       });
+    }
+    inputCentroNome.addEventListener('input', () => {
+      inputCentroId.value = '';
+      document.getElementById('painel-centro-parecido').style.display = 'none';
+      document.getElementById('painel-centro-novo').style.display = 'none';
+      atualizarSugestoesCentro();
     });
+    inputCentroNome.addEventListener('focus', atualizarSugestoesCentro);
 
     document.addEventListener('click', (e) => {
       if (!e.target.closest('#fornecedor-nome') && !e.target.closest('#fornecedor-sugestoes')) fecharSugestoes();
