@@ -16,6 +16,10 @@
   .painel-fornecedor h4{margin:0 0 8px;font-size:.92rem}
   .painel-fornecedor p{margin:0 0 10px;font-size:.84rem;color:var(--ink-500,#5B6472)}
   .painel-fornecedor .acoes{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .painel-anexo{border:1px solid var(--border,#DAD2C0);border-radius:10px;padding:14px 16px;margin:14px 0;background:#FBF9F4;max-width:520px}
+  .painel-anexo h4{margin:0 0 8px;font-size:.92rem}
+  .painel-anexo label{display:block;margin-top:8px}
+  .painel-anexo .acoes{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -108,6 +112,24 @@
           <thead><tr><th>Fornecedor</th><th>Centro custo</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody></tbody>
         </table>
+
+        <div class="painel-anexo" id="painel-anexar-nf" style="display:none">
+          <h4>Anexar NF/RPA</h4>
+          <input type="hidden" id="anexo-solicitacao-id">
+          <label>Arquivo (PDF, imagem ou XML da nota)</label>
+          <input type="file" id="anexo-arquivo" accept=".pdf,.png,.jpg,.jpeg,.xml">
+          <label>Tipo de documento</label>
+          <select id="anexo-tipo">
+            <option value="NFe">NFe</option>
+            <option value="NFSe">NFSe</option>
+            <option value="RPA">RPA</option>
+            <option value="Recibo_Simples">Recibo simples</option>
+          </select>
+          <div class="acoes">
+            <button type="button" class="btn gold" id="btn-confirmar-anexo">Enviar anexo</button>
+            <button type="button" class="btn ghost" id="btn-cancelar-anexo">Cancelar</button>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -351,7 +373,7 @@
 
     async function carregarSolicitacoes() {
       const { data: rows } = await supabase.from('solicitacoes_pagamento')
-        .select('id_solicitacao, valor, data_vencimento, status, solicitante_id, documento_fiscal_id, fornecedores(razao_social), centros_custo(nome)')
+        .select('id_solicitacao, valor, data_vencimento, status, solicitante_id, documento_fiscal_id, fornecedores(razao_social), centros_custo(nome), documentos_fiscais(arquivo_url)')
         .order('criado_em', { ascending: false }).limit(30);
 
       const linhas = (rows || []).map(r => {
@@ -363,6 +385,9 @@
         }
         if (r.status === 'aprovado' && !r.documento_fiscal_id) {
           acoes += `<button class="btn ghost" onclick="abrirUploadNF('${r.id_solicitacao}')">Anexar NF/RPA</button>`;
+        }
+        if (r.documento_fiscal_id) {
+          acoes += `<button class="btn ghost" onclick="verDocumento('${r.documentos_fiscais.arquivo_url}')">Ver NF/RPA</button>`;
         }
         if (r.status === 'aprovado' && r.documento_fiscal_id) {
           acoes += `<button class="gold" onclick="liquidar('${r.id_solicitacao}')">Liquidar</button>`;
@@ -393,27 +418,62 @@
       } catch (err) { mostrarErro(err.message); }
     };
 
+    // Upload real de arquivo pro bucket privado "documentos-fiscais" do
+    // Supabase Storage (antes disso não existia bucket nenhum — o campo
+    // só aceitava uma URL já hospedada em algum outro lugar via prompt(),
+    // o que na prática travava a liquidação, o Balancete e a conciliação
+    // bancária de despesas, já que todos exigem status='liquidado', que só
+    // é alcançado depois de anexar a NF/RPA).
     window.abrirUploadNF = function (id) {
-      const url = prompt('URL do arquivo da NF/RPA já hospedado (ex: Supabase Storage):');
-      if (!url) return;
-      const tipo = prompt('Tipo do documento (NFe, NFSe, RPA, Recibo_Simples):', 'NFe');
-      if (!tipo) return;
-      anexarNF(id, url, tipo);
+      document.getElementById('anexo-solicitacao-id').value = id;
+      document.getElementById('anexo-arquivo').value = '';
+      document.getElementById('anexo-tipo').value = 'NFe';
+      const painel = document.getElementById('painel-anexar-nf');
+      painel.style.display = 'block';
+      painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     };
 
-    async function anexarNF(solicitacaoId, arquivoUrl, tipo) {
+    document.getElementById('btn-cancelar-anexo').addEventListener('click', () => {
+      document.getElementById('painel-anexar-nf').style.display = 'none';
+    });
+
+    document.getElementById('btn-confirmar-anexo').addEventListener('click', async () => {
       try {
         await SGDE.comSessaoValida();
+        const solicitacaoId = document.getElementById('anexo-solicitacao-id').value;
+        const tipo = document.getElementById('anexo-tipo').value;
+        const arquivo = document.getElementById('anexo-arquivo').files[0];
+        if (!arquivo) { mostrarErro('Selecione o arquivo da NF/RPA.'); return; }
+
+        const nomeSanitizado = arquivo.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9._-]/g, '_');
+        const caminho = `${solicitacaoId}/${Date.now()}_${nomeSanitizado}`;
+        const { error: eUpload } = await supabase.storage.from('documentos-fiscais').upload(caminho, arquivo);
+        if (eUpload) throw eUpload;
+
         const { data: doc, error: e1 } = await supabase.from('documentos_fiscais').insert({
-          solicitacao_id: solicitacaoId, tipo, arquivo_url: arquivoUrl, validado_por_id: sessao.usuario_id,
+          solicitacao_id: solicitacaoId, tipo, arquivo_url: caminho, validado_por_id: sessao.usuario_id,
         }).select().single();
         if (e1) throw e1;
         const { error: e2 } = await supabase.from('solicitacoes_pagamento')
           .update({ documento_fiscal_id: doc.id_documento }).eq('id_solicitacao', solicitacaoId);
         if (e2) throw e2;
-        mostrarSucesso('Documento fiscal anexado.'); carregarSolicitacoes();
+
+        mostrarSucesso('Documento fiscal anexado.');
+        document.getElementById('painel-anexar-nf').style.display = 'none';
+        carregarSolicitacoes();
       } catch (err) { mostrarErro(err.message); }
-    }
+    });
+
+    // Bucket é privado, então a visualização usa uma signed URL gerada na
+    // hora (o texto salvo em arquivo_url é o caminho do arquivo dentro do
+    // bucket, não uma URL pública).
+    window.verDocumento = async function (caminho) {
+      try {
+        const { data, error } = await supabase.storage.from('documentos-fiscais').createSignedUrl(caminho, 300);
+        if (error) throw error;
+        window.open(data.signedUrl, '_blank');
+      } catch (err) { mostrarErro(err.message); }
+    };
 
     window.liquidar = async function (id) {
       try {
