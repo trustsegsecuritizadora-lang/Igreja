@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SGDE · Saídas</title>
 <link rel="stylesheet" href="css/style.css">
+<style>
+  .campo-fornecedor{position:relative}
+  .autocomplete-lista{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border,#DAD2C0);border-radius:8px;margin-top:4px;max-height:220px;overflow:auto;z-index:20;box-shadow:0 6px 18px rgba(15,27,45,.12);display:none}
+  .autocomplete-lista.aberta{display:block}
+  .autocomplete-item{padding:9px 12px;cursor:pointer;font-size:.88rem;display:flex;justify-content:space-between;gap:8px}
+  .autocomplete-item:hover,.autocomplete-item.destacado{background:#F5F1E8}
+  .autocomplete-item .cat{font-size:.74rem;color:var(--ink-500,#5B6472)}
+  .painel-fornecedor{border:1px solid var(--border,#DAD2C0);border-radius:10px;padding:14px 16px;margin-top:10px;background:#FBF9F4}
+  .painel-fornecedor h4{margin:0 0 8px;font-size:.92rem}
+  .painel-fornecedor p{margin:0 0 10px;font-size:.84rem;color:var(--ink-500,#5B6472)}
+  .painel-fornecedor .acoes{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+</style>
 </head>
 <body>
   <div class="shell">
@@ -17,13 +29,48 @@
         <h2>Nova solicitação de pagamento</h2>
         <form id="form-solicitacao">
           <div class="grid grid-4">
-            <div><label>Fornecedor</label><select name="fornecedor_id" id="sel-fornecedor" required></select></div>
+            <div class="campo-fornecedor">
+              <label>Fornecedor</label>
+              <input type="text" id="fornecedor-nome" placeholder="Digite o nome…" autocomplete="off" required>
+              <input type="hidden" id="fornecedor-id">
+              <div class="autocomplete-lista" id="fornecedor-sugestoes"></div>
+            </div>
             <div><label>Centro de custo</label><select name="centro_custo_id" id="sel-centro" required></select></div>
             <div><label>Valor</label><input type="number" step="0.01" min="0.01" name="valor" required></div>
             <div><label>Vencimento</label><input type="date" name="data_vencimento" required></div>
           </div>
           <label>Descrição</label>
           <textarea name="descricao" rows="2" required></textarea>
+
+          <div class="painel-fornecedor" id="painel-fornecedor-parecido" style="display:none">
+            <h4>Já existe um fornecedor parecido</h4>
+            <p id="texto-fornecedor-parecido"></p>
+            <div class="acoes">
+              <button type="button" class="btn gold" id="btn-usar-parecido">É o mesmo, usar este</button>
+              <button type="button" class="btn ghost" id="btn-e-outro">Não, é outro fornecedor</button>
+            </div>
+          </div>
+
+          <div class="painel-fornecedor" id="painel-fornecedor-novo" style="display:none">
+            <h4>Cadastrar novo fornecedor</h4>
+            <p>Não encontramos nenhum cadastro parecido com esse nome. Preencha para cadastrar e seguir com a solicitação.</p>
+            <div class="grid grid-3">
+              <div><label>Razão social / nome</label><input type="text" id="novo-forn-nome"></div>
+              <div><label>CNPJ/CPF</label><input type="text" id="novo-forn-doc" placeholder="Só números ou formatado"></div>
+              <div><label>Categoria</label>
+                <select id="novo-forn-categoria">
+                  <option value="Fornecedor">Fornecedor</option>
+                  <option value="Prestador_Servico">Prestador de serviço</option>
+                  <option value="Pastor_Prebenda">Pastor (prebenda)</option>
+                </select>
+              </div>
+            </div>
+            <div class="acoes">
+              <button type="button" class="btn gold" id="btn-cadastrar-forn">Cadastrar e continuar</button>
+              <button type="button" class="btn ghost" id="btn-cancelar-forn">Cancelar</button>
+            </div>
+          </div>
+
           <button type="submit" class="gold" style="margin-top:16px">Solicitar</button>
         </form>
       </div>
@@ -43,16 +90,131 @@
   <script src="js/sidebar.js"></script>
   <script>
     let sessao;
+    let fornecedoresCache = [];
+    const ROTULOS_CATEGORIA = { Fornecedor: 'Fornecedor', Prestador_Servico: 'Prestador de serviço', Pastor_Prebenda: 'Pastor (prebenda)' };
 
     async function carregarSelects() {
-      const { data: fornecedores } = await supabase.from('fornecedores').select('id_fornecedor, razao_social').eq('ativo', true).order('razao_social');
-      document.getElementById('sel-fornecedor').innerHTML = (fornecedores || [])
-        .map(f => `<option value="${f.id_fornecedor}">${f.razao_social}</option>`).join('') || '<option value="">Cadastre um fornecedor</option>';
+      const { data: fornecedores } = await supabase.from('fornecedores').select('id_fornecedor, razao_social, categoria').eq('ativo', true).order('razao_social');
+      fornecedoresCache = fornecedores || [];
 
       const { data: centros } = await supabase.from('centros_custo').select('id_centro, nome').eq('ativo', true).order('nome');
       document.getElementById('sel-centro').innerHTML = (centros || [])
         .map(c => `<option value="${c.id_centro}">${c.nome}</option>`).join('') || '<option value="">Cadastre um centro de custo</option>';
     }
+
+    // ── Busca de fornecedor com detecção de "parecido" ──────────────────
+    // Objetivo: nunca deixar cadastrar um fornecedor sem checar antes se
+    // já existe algo parecido (ex.: "Estofador" / "Extofador", erro de
+    // digitação). Pega erro de digitação/grafia por distância de edição;
+    // NÃO reconhece apelidos totalmente diferentes pro mesmo lugar (ex.:
+    // "Padaria" vs "Café da Manhã") — isso ainda depende de quem lança
+    // reconhecer o nome certo na lista de sugestões.
+    function normalizarTexto(s) {
+      return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+    }
+    function distanciaLevenshtein(a, b) {
+      const m = a.length, n = b.length;
+      const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
+        dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+      }
+      return dp[m][n];
+    }
+    function similaridade(a, b) {
+      const na = normalizarTexto(a), nb = normalizarTexto(b);
+      if (!na || !nb) return 0;
+      const base = 1 - distanciaLevenshtein(na, nb) / Math.max(na.length, nb.length);
+      const substring = na.includes(nb) || nb.includes(na);
+      return substring ? Math.max(base, 0.85) : base;
+    }
+    function fornecedoresParecidos(nomeDigitado, limite = 0.72) {
+      const nd = normalizarTexto(nomeDigitado);
+      if (!nd) return [];
+      return fornecedoresCache
+        .map(f => ({ ...f, sim: similaridade(nomeDigitado, f.razao_social) }))
+        .filter(f => f.sim >= limite)
+        .sort((a, b) => b.sim - a.sim);
+    }
+
+    const inputNome = document.getElementById('fornecedor-nome');
+    const inputId = document.getElementById('fornecedor-id');
+    const listaSugestoes = document.getElementById('fornecedor-sugestoes');
+
+    function fecharSugestoes() { listaSugestoes.classList.remove('aberta'); listaSugestoes.innerHTML = ''; }
+
+    function selecionarFornecedor(f) {
+      inputId.value = f.id_fornecedor;
+      inputNome.value = f.razao_social;
+      fecharSugestoes();
+      document.getElementById('painel-fornecedor-parecido').style.display = 'none';
+      document.getElementById('painel-fornecedor-novo').style.display = 'none';
+    }
+
+    inputNome.addEventListener('input', () => {
+      inputId.value = ''; // qualquer edição no texto invalida a seleção anterior
+      document.getElementById('painel-fornecedor-parecido').style.display = 'none';
+      document.getElementById('painel-fornecedor-novo').style.display = 'none';
+      const parecidos = fornecedoresParecidos(inputNome.value, 0.35).slice(0, 8);
+      if (!inputNome.value.trim() || parecidos.length === 0) { fecharSugestoes(); return; }
+      listaSugestoes.innerHTML = parecidos.map(f => `
+        <div class="autocomplete-item" data-id="${f.id_fornecedor}">
+          <span>${f.razao_social}</span><span class="cat">${ROTULOS_CATEGORIA[f.categoria] || ''}</span>
+        </div>`).join('');
+      listaSugestoes.classList.add('aberta');
+      listaSugestoes.querySelectorAll('.autocomplete-item').forEach(el => {
+        el.addEventListener('mousedown', (ev) => { // mousedown: dispara antes do blur do input
+          ev.preventDefault();
+          const f = fornecedoresCache.find(x => x.id_fornecedor === el.dataset.id);
+          if (f) selecionarFornecedor(f);
+        });
+      });
+    });
+    document.addEventListener('click', (e) => { if (!e.target.closest('.campo-fornecedor')) fecharSugestoes(); });
+
+    document.getElementById('btn-usar-parecido').addEventListener('click', () => {
+      const id = document.getElementById('painel-fornecedor-parecido').dataset.candidatoId;
+      const f = fornecedoresCache.find(x => x.id_fornecedor === id);
+      if (f) selecionarFornecedor(f);
+      enviarSolicitacao();
+    });
+
+    document.getElementById('btn-e-outro').addEventListener('click', () => {
+      document.getElementById('painel-fornecedor-parecido').style.display = 'none';
+      abrirPainelNovoFornecedor();
+    });
+
+    document.getElementById('btn-cancelar-forn').addEventListener('click', () => {
+      document.getElementById('painel-fornecedor-novo').style.display = 'none';
+    });
+
+    function abrirPainelNovoFornecedor() {
+      document.getElementById('novo-forn-nome').value = inputNome.value.trim();
+      document.getElementById('novo-forn-doc').value = '';
+      document.getElementById('novo-forn-categoria').value = 'Fornecedor';
+      document.getElementById('painel-fornecedor-novo').style.display = 'block';
+    }
+
+    document.getElementById('btn-cadastrar-forn').addEventListener('click', async () => {
+      try {
+        await SGDE.comSessaoValida();
+        const razao_social = document.getElementById('novo-forn-nome').value.trim();
+        const cnpj_cpf = document.getElementById('novo-forn-doc').value.trim();
+        const categoria = document.getElementById('novo-forn-categoria').value;
+        if (!razao_social || !cnpj_cpf) { mostrarErro('Informe nome e CNPJ/CPF do fornecedor.'); return; }
+        const { data, error } = await supabase.from('fornecedores')
+          .insert({ razao_social, cnpj_cpf, categoria }).select().single();
+        if (error) {
+          if (error.code === '23505') { mostrarErro('Já existe um fornecedor cadastrado com esse CNPJ/CPF — confira o nome dele na lista antes de tentar de novo.'); return; }
+          throw error;
+        }
+        fornecedoresCache.push(data);
+        mostrarSucesso('Fornecedor cadastrado.');
+        selecionarFornecedor(data);
+        enviarSolicitacao();
+      } catch (err) { mostrarErro(err.message); }
+    });
 
     async function carregarSolicitacoes() {
       const { data: rows } = await supabase.from('solicitacoes_pagamento')
@@ -129,19 +291,51 @@
       } catch (err) { mostrarErro(err.message); }
     };
 
-    document.getElementById('form-solicitacao').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    async function enviarSolicitacao() {
       try {
         await SGDE.comSessaoValida();
-        const fd = new FormData(e.target);
+        const form = document.getElementById('form-solicitacao');
+        const fd = new FormData(form);
         const { error } = await supabase.from('solicitacoes_pagamento').insert({
-          fornecedor_id: fd.get('fornecedor_id'), centro_custo_id: fd.get('centro_custo_id'),
+          fornecedor_id: inputId.value, centro_custo_id: fd.get('centro_custo_id'),
           valor: fd.get('valor'), data_vencimento: fd.get('data_vencimento'),
           descricao: fd.get('descricao'), solicitante_id: sessao.usuario_id,
         });
         if (error) throw error;
-        mostrarSucesso('Solicitação criada.'); e.target.reset(); carregarSolicitacoes();
+        mostrarSucesso('Solicitação criada.');
+        form.reset();
+        inputId.value = '';
+        document.getElementById('painel-fornecedor-parecido').style.display = 'none';
+        document.getElementById('painel-fornecedor-novo').style.display = 'none';
+        carregarSolicitacoes();
       } catch (err) { mostrarErro(err.message); }
+    }
+
+    document.getElementById('form-solicitacao').addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!inputNome.value.trim()) { mostrarErro('Informe o fornecedor.'); return; }
+
+      // Já tem um fornecedor confirmado (escolhido na lista ou recém-
+      // cadastrado) e o texto não foi alterado depois — segue direto.
+      if (inputId.value) { enviarSolicitacao(); return; }
+
+      // Texto livre, sem seleção confirmada: procura algo parecido já
+      // cadastrado antes de deixar criar um novo (evita duplicidade tipo
+      // "Estofador" / "Extofador").
+      const parecidos = fornecedoresParecidos(inputNome.value, 0.72);
+      if (parecidos.length > 0) {
+        const top = parecidos[0];
+        const painel = document.getElementById('painel-fornecedor-parecido');
+        painel.dataset.candidatoId = top.id_fornecedor;
+        document.getElementById('texto-fornecedor-parecido').textContent =
+          `Você digitou "${inputNome.value.trim()}". Já existe "${top.razao_social}" (${ROTULOS_CATEGORIA[top.categoria] || ''}) cadastrado — é o mesmo fornecedor?`;
+        painel.style.display = 'block';
+        document.getElementById('painel-fornecedor-novo').style.display = 'none';
+        painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+      }
+
+      abrirPainelNovoFornecedor();
     });
 
     (async function init() {
