@@ -1,0 +1,13 @@
+# Documentos administrativos e financeiros da igreja: nunca devem ir para
+# o GitHub. Vivem só localmente/OneDrive.
+/Documentos/
+
+# Certificados digitais, por precaução (mesmo se alguém salvar um fora de
+# Documentos/ por engano).
+*.pfx
+*.p12
+*.key
+
+# Lixo comum de SO/editor.
+Thumbs.db
+.DS_Store
