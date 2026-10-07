@@ -166,7 +166,7 @@
         const fd = new FormData(e.target);
         const arquivo = document.getElementById('input-arquivo').files[0];
         if (!arquivo) throw new Error('Selecione um arquivo.');
-        const texto = await arquivo.text();
+        const texto = await lerTextoArquivoBancario(arquivo);
         const formato = fd.get('formato');
         const movimentos = formato === 'OFX' ? parseOFX(texto) : parseCSV(texto);
         if (movimentos.length === 0) throw new Error('Nenhum movimento reconhecido no arquivo — confira o formato.');
