@@ -26,10 +26,65 @@ function parseOFX(texto) {
   return movimentos;
 }
 
+// ---------------------------------------------------------------------
+// CSV "legado" do Banco do Brasil (extrato baixado direto do site/app do
+// BB): sem linha de cabeçalho, 13 colunas separadas por ';', data em
+// DD.MM.AAAA (com pontos) e o sinal do valor fica numa coluna separada
+// ('C' = crédito/entrada, 'D' = débito/saída) em vez de embutido no
+// número. Ex. de linha real:
+//   12513;000000466506; ;15.09.2026;15.09.2026;0000;13105;...;144;Pix - Enviado            ;450,00;D;15/09 16:24 ONR
+// Colunas usadas: [3]=data, [8]=código histórico, [9]=histórico,
+// [10]=valor (sem sinal), [11]=indicador C/D, [12]=complemento.
+function pareceExtratoBBLegado(linhas) {
+  if (!linhas.length) return false;
+  const cols = linhas[0].split(';');
+  return cols.length >= 12
+    && /^\d{2}\.\d{2}\.\d{4}$/.test((cols[3] || '').trim())
+    && /^[CD]$/i.test((cols[11] || '').trim());
+}
+
+function parseCSVExtratoBBLegado(linhas) {
+  const movimentos = [];
+  for (let i = 0; i < linhas.length; i++) {
+    const cols = linhas[i].split(';');
+    if (cols.length < 12) continue;
+
+    const dataRaw = (cols[3] || '').trim();
+    const m = dataRaw.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (!m) continue;
+    const data = `${m[3]}-${m[2]}-${m[1]}`;
+
+    const codigoHistorico = (cols[8] || '').trim();
+    const historico = (cols[9] || '').trim();
+    // Linhas de saldo (abertura/fechamento do período do extrato) não são
+    // movimentos de verdade — códigos reservados 000/999, ou histórico
+    // "Saldo Anterior"/"S A L D O".
+    if (codigoHistorico === '000' || codigoHistorico === '999' || /^s\s*a\s*l\s*d\s*o/i.test(historico)) continue;
+
+    const indicador = (cols[11] || '').trim().toUpperCase();
+    const valorAbs = parseFloat((cols[10] || '').trim().replace(/\./g, '').replace(',', '.'));
+    if (isNaN(valorAbs)) continue;
+    const valor = indicador === 'D' ? -valorAbs : valorAbs;
+
+    const complemento = (cols[12] || '').trim();
+    const descricao = complemento ? `${historico} — ${complemento}` : historico;
+
+    movimentos.push({ data, valor, descricao, ref: `${data}-${valor}-${historico}-${i}` });
+  }
+  return movimentos;
+}
+
 function parseCSV(texto) {
-  // Espera cabeçalho com colunas data,valor,descricao (nessa ordem ou
-  // nomeadas). Aceita separador ; ou ,. Datas em DD/MM/AAAA ou AAAA-MM-DD.
   const linhas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (linhas.length < 1) return [];
+
+  if (pareceExtratoBBLegado(linhas)) {
+    return parseCSVExtratoBBLegado(linhas);
+  }
+
+  // Formato genérico: espera cabeçalho com colunas data,valor,descricao
+  // (nessa ordem ou nomeadas). Aceita separador ; ou ,. Datas em
+  // DD/MM/AAAA ou AAAA-MM-DD.
   if (linhas.length < 2) return [];
   const sep = linhas[0].includes(';') ? ';' : ',';
   const cab = linhas[0].split(sep).map(c => c.trim().toLowerCase());
@@ -59,6 +114,20 @@ function parseCSV(texto) {
     movimentos.push({ data, valor, descricao, ref: `${data}-${valor}-${descricao}-${i}` });
   }
   return movimentos;
+}
+
+// Lê o arquivo tentando UTF-8 primeiro; extratos de bancos brasileiros
+// (ex.: este CSV legado do BB) costumam vir em ISO-8859-1/Windows-1252,
+// o que sem isso vira "F�cil" em vez de "Fácil" em todo acento do
+// histórico. TextDecoder com fatal:true rejeita bytes que não são UTF-8
+// válido, então cai para ISO-8859-1 automaticamente nesse caso.
+async function lerTextoArquivoBancario(arquivo) {
+  const buf = await arquivo.arrayBuffer();
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buf);
+  } catch (e) {
+    return new TextDecoder('iso-8859-1').decode(buf);
+  }
 }
 
 async function hashSha256Hex(texto) {
