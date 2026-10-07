@@ -60,6 +60,14 @@ function parseCSVExtratoBBLegado(linhas) {
     // movimentos de verdade — códigos reservados 000/999, ou histórico
     // "Saldo Anterior"/"S A L D O".
     if (codigoHistorico === '000' || codigoHistorico === '999' || /^s\s*a\s*l\s*d\s*o/i.test(historico)) continue;
+    // "BB Rende Fácil" é a aplicação automática de saldo ocioso do próprio
+    // BB: toda vez que uma saída sai da conta, o banco resgata o valor
+    // equivalente do Rende Fácil (e vice-versa quando entra dinheiro),
+    // gerando um lançamento espelho de mesmo valor/data. Não é receita
+    // nem despesa da igreja — é só o banco movendo o saldo entre a conta
+    // corrente e a aplicação automática — então não entra como movimento.
+    const historicoSemAcento = historico.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (historicoSemAcento.includes('rende facil')) continue;
 
     const indicador = (cols[11] || '').trim().toUpperCase();
     const valorAbs = parseFloat((cols[10] || '').trim().replace(/\./g, '').replace(',', '.'));
